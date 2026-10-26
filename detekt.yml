@@ -6,7 +6,7 @@ naming:
   PackageNaming:
     active: true
 
-potential-bugs:
+exceptions:
   PrintStackTrace:
     active: true
 
