@@ -1,0 +1,53 @@
+[versions]
+agp = "8.13.0"
+kotlin = "2.1.10"
+bouncycastle = "1.81"
+jcodec = "0.2.5"
+okhttp = "4.12.0"
+jmdns = "3.6.2"
+shieldControllerExtensions = "1.0.1"
+gson = "2.13.1"
+androidxAnnotation = "1.9.1"
+androidxCardview = "1.0.0"
+androidxAppcompat = "1.7.1"
+androidxPreference = "1.2.1"
+androidxRecyclerview = "1.4.0"
+material = "1.13.0"
+searchPreference = "v2.5.1"
+mpAndroidChart = "v3.1.0"
+litert = "1.4.0"
+opencv = "4.12.0"
+
+junit = "4.13.2"
+androidxTestCore = "1.7.0"
+robolectric = "4.16"
+mockito = "5.19.0"
+
+[libraries]
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+jcodec = { module = "org.jcodec:jcodec", version.ref = "jcodec" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
+shield-controller-extensions = { module = "com.github.cgutman:ShieldControllerExtensions", version.ref = "shieldControllerExtensions" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
+androidx-preference = { module = "androidx.preference:preference", version.ref = "androidxPreference" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidxRecyclerview" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+search-preference = { module = "com.github.ByteHamster:SearchPreference", version.ref = "searchPreference" }
+mp-android-chart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpAndroidChart" }
+litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }
+opencv = { module = "org.opencv:opencv", version.ref = "opencv" }
+
+test-junit = { module = "junit:junit", version.ref = "junit" }
+test-androidx-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
+test-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+test-mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
