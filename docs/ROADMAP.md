@@ -34,7 +34,7 @@ wrapped and tested before it is touched.
 ## Phase 2: Make the core testable
 
 - [ ] Extract from `Game.java` (4.3k lines): input routing, stream lifecycle, overlay/menu, display handling
-- [ ] Extract from `ControllerHandler.java` (3.5k): device registry, rumble/LED/motion, driver glue
+- [ ] Extract from `ControllerHandler.java`: rumble, LED, and motion subsystems extracted to `ControllerRumbleManager`, `ControllerLightsManager`, `ControllerSensorManager` (device registry & driver glue remaining)
 - [x] Define a small `core:stream` API: `StreamSession(config) -> state Flow + events`; UI never touches `NvConnection` directly
 - [x] JNI behind one module `core:native`
 - [x] Unit tests for the protocol side (`nvstream.http`, pairing, serverinfo parsing) and the keyboard/mouse translators

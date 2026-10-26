@@ -129,6 +129,11 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private final Handler mainThreadHandler;
     private final HandlerThread backgroundHandlerThread;
     private final Handler backgroundThreadHandler;
+    private final ControllerRumbleManager controllerRumbleManager;
+    private final ControllerSensorManager controllerSensorManager;
+    private final ArrayList<RumbleTarget> activeInputRumbleTargets = new ArrayList<>();
+    private final ArrayList<RumbleTarget> activeUsbRumbleTargets = new ArrayList<>();
+    private final ArrayList<SensorTarget> activeSensorTargets = new ArrayList<>();
     private boolean hasGameController;
     private boolean stopped = false;
 
@@ -162,6 +167,12 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         this.sceManager = new SceManager(activityContext);
         this.sceManager.start();
+
+        this.controllerRumbleManager = new ControllerRumbleManager(this.deviceVibrator, this.prefConfig, this.sceManager);
+        this.controllerSensorManager = new ControllerSensorManager(
+                () -> activityContext.getWindowManager().getDefaultDisplay().getRotation(),
+                (controllerNumber, motionType, x, y, z) -> conn.sendControllerMotionEvent(controllerNumber, motionType, x, y, z)
+        );
 
         int deadzonePercentage = prefConfig.deadzonePercentage;
 
@@ -279,6 +290,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
         // Stop new device contexts from being created or used
         stopped = true;
+        controllerRumbleManager.setStopped(true);
 
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this);
@@ -595,23 +607,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return false;
         }
 
-        // Landroid/view/InputDevice;->hasButtonUnderPad()Z is blocked after O
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) {
-            try {
-                return (Boolean) dev.getClass().getMethod("hasButtonUnderPad").invoke(dev);
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (ClassCastException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // We can't use the platform API, so we'll have to just guess based on the gamepad type.
-        // If this is a PlayStation controller with a touchpad, we know it has a clickpad.
+        // hasButtonUnderPad() is blocked on API 28+, so guess based on PlayStation controller type
         return type == MoonBridge.LI_CTYPE_PS;
     }
 
@@ -643,15 +639,9 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         else {
             try {
                 // Landroid/view/InputDevice;->isExternal()Z is on the light graylist in Android P
-                return (Boolean)dev.getClass().getMethod("isExternal").invoke(dev);
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (ClassCastException e) {
-                e.printStackTrace();
+                return (Boolean) dev.getClass().getMethod("isExternal").invoke(dev);
+            } catch (ReflectiveOperationException | ClassCastException e) {
+                LimeLog.warning("Failed to invoke isExternal via reflection: " + e.getMessage());
             }
         }
 
@@ -789,21 +779,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         // Check if this device has a usable RGB LED and cache that result
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            for (Light light : dev.getLightsManager().getLights()) {
-                if (light.hasRgbControl()) {
-                    context.hasRgbLed = true;
-                    break;
-                }
-            }
-
-            // Light.hasRgbControl() was totally broken prior to Android 14.
-            // It always returned true because LIGHT_CAPABILITY_RGB was defined as 0,
-            // so we will just guess RGB is supported if it's a PlayStation controller.
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE && context.vendorId != 0x054c) {
-                context.hasRgbLed = false;
-            }
-        }
+        context.hasRgbLed = ControllerLightsManager.INSTANCE.hasRgbControl(dev);
 
         // Detect if the gamepad has Mode and Select buttons according to the Android key layouts.
         // We do this first because other codepaths below may override these defaults.
@@ -2004,365 +1980,59 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     @TargetApi(31)
     private boolean hasDualAmplitudeControlledRumbleVibrators(VibratorManager vm) {
-        int[] vibratorIds = vm.getVibratorIds();
-
-        // There must be exactly 2 vibrators on this device
-        if (vibratorIds.length != 2) {
-            return false;
-        }
-
-        // Both vibrators must have amplitude control
-        for (int vid : vibratorIds) {
-            if (!vm.getVibrator(vid).hasAmplitudeControl()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    // This must only be called if hasDualAmplitudeControlledRumbleVibrators() is true!
-    @TargetApi(31)
-    private void rumbleDualVibrators(VibratorManager vm, short lowFreqMotor, short highFreqMotor) {
-        // Normalize motor values to 0-255 amplitudes for VibrationManager
-        highFreqMotor = (short)((highFreqMotor >> 8) & 0xFF);
-        lowFreqMotor = (short)((lowFreqMotor >> 8) & 0xFF);
-
-        // If they're both zero, we can just call cancel().
-        if (lowFreqMotor == 0 && highFreqMotor == 0) {
-            vm.cancel();
-            return;
-        }
-
-        // There's no documentation that states that vibrators for FF_RUMBLE input devices will
-        // always be enumerated in this order, but it seems consistent between Xbox Series X (USB),
-        // PS3 (USB), and PS4 (USB+BT) controllers on Android 12 Beta 3.
-        int[] vibratorIds = vm.getVibratorIds();
-        int[] vibratorAmplitudes = new int[] { highFreqMotor, lowFreqMotor };
-
-        CombinedVibration.ParallelCombination combo = CombinedVibration.startParallel();
-
-        for (int i = 0; i < vibratorIds.length; i++) {
-            // It's illegal to create a VibrationEffect with an amplitude of 0.
-            // Simply excluding that vibrator from our ParallelCombination will turn it off.
-            if (vibratorAmplitudes[i] != 0) {
-                combo.addVibrator(vibratorIds[i], VibrationEffect.createOneShot(60000, vibratorAmplitudes[i]));
-            }
-        }
-
-        VibrationAttributes.Builder vibrationAttributes = new VibrationAttributes.Builder();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            vibrationAttributes.setUsage(VibrationAttributes.USAGE_MEDIA);
-        }
-
-        vm.vibrate(combo.combine(), vibrationAttributes.build());
+        return ControllerRumbleManager.Companion.hasDualAmplitudeControlledRumbleVibrators(vm);
     }
 
     @TargetApi(31)
     private boolean hasQuadAmplitudeControlledRumbleVibrators(VibratorManager vm) {
-        int[] vibratorIds = vm.getVibratorIds();
-
-        // There must be exactly 4 vibrators on this device
-        if (vibratorIds.length != 4) {
-            return false;
-        }
-
-        // All vibrators must have amplitude control
-        for (int vid : vibratorIds) {
-            if (!vm.getVibrator(vid).hasAmplitudeControl()) {
-                return false;
-            }
-        }
-
-        return true;
+        return ControllerRumbleManager.Companion.hasQuadAmplitudeControlledRumbleVibrators(vm);
     }
 
-    // This must only be called if hasQuadAmplitudeControlledRumbleVibrators() is true!
-    @TargetApi(31)
-    private void rumbleQuadVibrators(VibratorManager vm, short lowFreqMotor, short highFreqMotor, short leftTrigger, short rightTrigger) {
-        // Normalize motor values to 0-255 amplitudes for VibrationManager
-        highFreqMotor = (short)((highFreqMotor >> 8) & 0xFF);
-        lowFreqMotor = (short)((lowFreqMotor >> 8) & 0xFF);
-        leftTrigger = (short)((leftTrigger >> 8) & 0xFF);
-        rightTrigger = (short)((rightTrigger >> 8) & 0xFF);
-
-        // If they're all zero, we can just call cancel().
-        if (lowFreqMotor == 0 && highFreqMotor == 0 && leftTrigger == 0 && rightTrigger == 0) {
-            vm.cancel();
-            return;
+    private List<RumbleTarget> getActiveInputRumbleTargets() {
+        activeInputRumbleTargets.clear();
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            activeInputRumbleTargets.add(inputDeviceContexts.valueAt(i));
         }
-
-        // This is a guess based upon the behavior of FF_RUMBLE, but untested due to lack of Linux
-        // support for trigger rumble!
-        int[] vibratorIds = vm.getVibratorIds();
-        int[] vibratorAmplitudes = new int[] { highFreqMotor, lowFreqMotor, leftTrigger, rightTrigger };
-
-        CombinedVibration.ParallelCombination combo = CombinedVibration.startParallel();
-
-        for (int i = 0; i < vibratorIds.length; i++) {
-            // It's illegal to create a VibrationEffect with an amplitude of 0.
-            // Simply excluding that vibrator from our ParallelCombination will turn it off.
-            if (vibratorAmplitudes[i] != 0) {
-                combo.addVibrator(vibratorIds[i], VibrationEffect.createOneShot(60000, vibratorAmplitudes[i]));
-            }
-        }
-
-        VibrationAttributes.Builder vibrationAttributes = new VibrationAttributes.Builder();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            vibrationAttributes.setUsage(VibrationAttributes.USAGE_MEDIA);
-        }
-
-        vm.vibrate(combo.combine(), vibrationAttributes.build());
+        return activeInputRumbleTargets;
     }
 
-    private void rumbleSingleVibrator(Vibrator vibrator, short lowFreqMotor, short highFreqMotor) {
-        // Since we can only use a single amplitude value, compute the desired amplitude
-        // by taking 80% of the big motor and 33% of the small motor, then capping to 255.
-        // NB: This value is now 0-255 as required by VibrationEffect.
-        short lowFreqMotorMSB = (short)((lowFreqMotor >> 8) & 0xFF);
-        short highFreqMotorMSB = (short)((highFreqMotor >> 8) & 0xFF);
-        int simulatedAmplitude = Math.min(255, (int)((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)));
+    private List<RumbleTarget> getActiveUsbRumbleTargets() {
+        activeUsbRumbleTargets.clear();
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            activeUsbRumbleTargets.add(usbDeviceContexts.valueAt(i));
+        }
+        return activeUsbRumbleTargets;
+    }
 
-        if (simulatedAmplitude == 0) {
-            // This case is easy - just cancel the current effect and get out.
-            // NB: We cannot simply check lowFreqMotor == highFreqMotor == 0
-            // because our simulatedAmplitude could be 0 even though our inputs
-            // are not (ex: lowFreqMotor == 0 && highFreqMotor == 1).
-            vibrator.cancel();
-            return;
+    private List<SensorTarget> getActiveSensorTargets() {
+        activeSensorTargets.clear();
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            activeSensorTargets.add(inputDeviceContexts.valueAt(i));
         }
-
-        // Attempt to use amplitude-based control if we're on Oreo and the device
-        // supports amplitude-based vibration control.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (vibrator.hasAmplitudeControl()) {
-                VibrationEffect effect = VibrationEffect.createOneShot(60000, simulatedAmplitude);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
-                            .setUsage(VibrationAttributes.USAGE_MEDIA)
-                            .build();
-                    vibrator.vibrate(effect, vibrationAttributes);
-                }
-                else {
-                    AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_GAME)
-                            .build();
-                    vibrator.vibrate(effect, audioAttributes);
-                }
-                return;
-            }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            activeSensorTargets.add(usbDeviceContexts.valueAt(i));
         }
-
-        // If we reach this point, we don't have amplitude controls available, so
-        // we must emulate it by PWMing the vibration. Ick.
-        long pwmPeriod = 20;
-        long onTime = (long)((simulatedAmplitude / 255.0) * pwmPeriod);
-        long offTime = pwmPeriod - onTime;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
-                    .setUsage(VibrationAttributes.USAGE_MEDIA)
-                    .build();
-            vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, onTime, offTime}, 0), vibrationAttributes);
-        }
-        else {
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_GAME)
-                    .build();
-            vibrator.vibrate(new long[]{0, onTime, offTime}, 0, audioAttributes);
-        }
+        return activeSensorTargets;
     }
 
     public void handleRumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        boolean foundMatchingDevice = false;
-        boolean vibrated = false;
-
-        if (stopped) {
-            return;
-        }
-
-        for (int i = 0; i < inputDeviceContexts.size(); i++) {
-            InputDeviceContext deviceContext = inputDeviceContexts.valueAt(i);
-
-            if (deviceContext.controllerNumber == controllerNumber) {
-                foundMatchingDevice = true;
-
-                deviceContext.lowFreqMotor = lowFreqMotor;
-                deviceContext.highFreqMotor = highFreqMotor;
-
-                // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox controllers
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && deviceContext.vibratorManager != null) {
-                    vibrated = true;
-                    if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(deviceContext.vibratorManager,
-                                deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
-                                deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor);
-                    }
-                    else {
-                        rumbleDualVibrators(deviceContext.vibratorManager,
-                                deviceContext.lowFreqMotor, deviceContext.highFreqMotor);
-                    }
-                }
-                // On Shield devices, we can use their special API to rumble Shield controllers
-                else if (sceManager.rumble(deviceContext.inputDevice, deviceContext.lowFreqMotor, deviceContext.highFreqMotor)) {
-                    vibrated = true;
-                }
-                // If all else fails, we have to try the old Vibrator API
-                else if (deviceContext.vibrator != null) {
-                    vibrated = true;
-                    rumbleSingleVibrator(deviceContext.vibrator, deviceContext.lowFreqMotor, deviceContext.highFreqMotor);
-                }
-            }
-        }
-
-        for (int i = 0; i < usbDeviceContexts.size(); i++) {
-            UsbDeviceContext deviceContext = usbDeviceContexts.valueAt(i);
-
-            if (deviceContext.controllerNumber == controllerNumber) {
-                foundMatchingDevice = vibrated = true;
-                deviceContext.device.rumble(lowFreqMotor, highFreqMotor);
-            }
-        }
-
-        // We may decide to rumble the device for player 1
-        if (controllerNumber == 0) {
-            // If we didn't find a matching device, it must be the on-screen
-            // controls that triggered the rumble. Vibrate the device if
-            // the user has requested that behavior.
-            if (!foundMatchingDevice && prefConfig.onscreenController && !prefConfig.onlyL3R3 && prefConfig.vibrateOsc) {
-                rumbleSingleVibrator(deviceVibrator, lowFreqMotor, highFreqMotor);
-            }
-            else if (foundMatchingDevice && !vibrated && prefConfig.vibrateFallbackToDevice) {
-                // We found a device to vibrate but it didn't have rumble support. The user
-                // has requested us to vibrate the device in this case.
-
-                // We cast the unsigned short value to a signed int before multiplying by
-                // the preferred strength. The resulting value is capped at 65534 before
-                // we cast it back to a short so it doesn't go above 100%.
-                short lowFreqMotorAdjusted = (short)(Math.min((((lowFreqMotor & 0xffff)
-                        * prefConfig.vibrateFallbackToDeviceStrength) / 100), Short.MAX_VALUE*2));
-                short highFreqMotorAdjusted = (short)(Math.min((((highFreqMotor & 0xffff)
-                        * prefConfig.vibrateFallbackToDeviceStrength) / 100), Short.MAX_VALUE*2));
-
-                rumbleSingleVibrator(deviceVibrator, lowFreqMotorAdjusted, highFreqMotorAdjusted);
-            }
-        }
+        controllerRumbleManager.handleRumble(
+                controllerNumber,
+                lowFreqMotor,
+                highFreqMotor,
+                getActiveInputRumbleTargets(),
+                getActiveUsbRumbleTargets()
+        );
     }
 
     public void handleRumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        if (stopped) {
-            return;
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            for (int i = 0; i < inputDeviceContexts.size(); i++) {
-                InputDeviceContext deviceContext = inputDeviceContexts.valueAt(i);
-
-                if (deviceContext.controllerNumber == controllerNumber) {
-                    deviceContext.leftTriggerMotor = leftTrigger;
-                    deviceContext.rightTriggerMotor = rightTrigger;
-
-                    if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(deviceContext.vibratorManager,
-                                deviceContext.lowFreqMotor, deviceContext.highFreqMotor,
-                                deviceContext.leftTriggerMotor, deviceContext.rightTriggerMotor);
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < usbDeviceContexts.size(); i++) {
-            UsbDeviceContext deviceContext = usbDeviceContexts.valueAt(i);
-
-            if (deviceContext.controllerNumber == controllerNumber) {
-                deviceContext.device.rumbleTriggers(leftTrigger, rightTrigger);
-            }
-        }
-    }
-
-    private SensorEventListener createSensorListener(final short controllerNumber, final byte motionType, final boolean needsDeviceOrientationCorrection) {
-        return new SensorEventListener() {
-            private float[] lastValues = new float[3];
-
-            @Override
-            public void onSensorChanged(SensorEvent sensorEvent) {
-                // Android will invoke our callback any time we get a new reading,
-                // even if the values are the same as last time. Don't report a
-                // duplicate set of values to save bandwidth.
-                if (sensorEvent.values[0] == lastValues[0] &&
-                        sensorEvent.values[1] == lastValues[1] &&
-                        sensorEvent.values[2] == lastValues[2]) {
-                    return;
-                }
-                else {
-                    lastValues[0] = sensorEvent.values[0];
-                    lastValues[1] = sensorEvent.values[1];
-                    lastValues[2] = sensorEvent.values[2];
-                }
-
-                int x = 0;
-                int y = 1;
-                int z = 2;
-                int xFactor = 1;
-                int yFactor = 1;
-                int zFactor = 1;
-
-                if (needsDeviceOrientationCorrection) {
-                    int deviceRotation = activityContext.getWindowManager().getDefaultDisplay().getRotation();
-                    switch (deviceRotation) {
-                        case Surface.ROTATION_0:
-                        case Surface.ROTATION_180:
-                            x = 0;
-                            y = 2;
-                            z = 1;
-                            break;
-
-                        case Surface.ROTATION_90:
-                        case Surface.ROTATION_270:
-                            x = 1;
-                            y = 2;
-                            z = 0;
-                            break;
-                    }
-
-                    switch (deviceRotation) {
-                        case Surface.ROTATION_0:
-                            zFactor = -1;
-                            break;
-                        case Surface.ROTATION_90:
-                            xFactor = -1;
-                            zFactor = -1;
-                            break;
-                        case Surface.ROTATION_180:
-                            xFactor = -1;
-                            break;
-                        case Surface.ROTATION_270:
-                            break;
-                    }
-                }
-
-                if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
-                    // Convert from rad/s to deg/s
-                    conn.sendControllerMotionEvent((byte) controllerNumber,
-                            motionType,
-                            sensorEvent.values[x] * xFactor * 57.2957795f,
-                            sensorEvent.values[y] * yFactor * 57.2957795f,
-                            sensorEvent.values[z] * zFactor * 57.2957795f);
-                }
-                else {
-                    // Pass m/s^2 directly without conversion
-                    conn.sendControllerMotionEvent((byte) controllerNumber,
-                            motionType,
-                            sensorEvent.values[x] * xFactor,
-                            sensorEvent.values[y] * yFactor,
-                            sensorEvent.values[z] * zFactor);
-                }
-            }
-
-            @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-        };
+        controllerRumbleManager.handleRumbleTriggers(
+                controllerNumber,
+                leftTrigger,
+                rightTrigger,
+                getActiveInputRumbleTargets(),
+                getActiveUsbRumbleTargets()
+        );
     }
 
     public void handleSetMotionEventState(final short controllerNumber, final byte motionType, short reportRateHz) {
@@ -2370,69 +2040,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             return;
         }
 
-        // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
-        reportRateHz = (short) Math.min(200, reportRateHz);
-
-        for (int i = 0; i < inputDeviceContexts.size() + usbDeviceContexts.size(); i++) {
-            InputDeviceContext deviceContext;
-            if (i < inputDeviceContexts.size()) {
-                deviceContext = inputDeviceContexts.valueAt(i);
-            } else {
-                deviceContext = usbDeviceContexts.valueAt(i - inputDeviceContexts.size());
-            }
-
-            if (deviceContext.controllerNumber == controllerNumber) {
-                // Store the desired report rate even if we don't have sensors. In some cases,
-                // input devices can be reconfigured at runtime which results in a change where
-                // sensors disappear and reappear. By storing the desired report rate, we can
-                // reapply the desired motion sensor configuration after they reappear.
-                switch (motionType) {
-                    case MoonBridge.LI_MOTION_TYPE_ACCEL:
-                        deviceContext.accelReportRateHz = reportRateHz;
-                        break;
-                    case MoonBridge.LI_MOTION_TYPE_GYRO:
-                        deviceContext.gyroReportRateHz = reportRateHz;
-                        break;
-                }
-
-                backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable);
-
-                SensorManager sm = deviceContext.sensorManager;
-                if (sm == null) {
-                    continue;
-                }
-
-                switch (motionType) {
-                    case MoonBridge.LI_MOTION_TYPE_ACCEL:
-                        if (deviceContext.accelListener != null) {
-                            sm.unregisterListener(deviceContext.accelListener);
-                            deviceContext.accelListener = null;
-                        }
-
-                        // Enable the accelerometer if requested
-                        Sensor accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                        if (reportRateHz != 0 && accelSensor != null) {
-                            deviceContext.accelListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager);
-                            sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / reportRateHz);
-                        }
-                        break;
-                    case MoonBridge.LI_MOTION_TYPE_GYRO:
-                        if (deviceContext.gyroListener != null) {
-                            sm.unregisterListener(deviceContext.gyroListener);
-                            deviceContext.gyroListener = null;
-                        }
-
-                        // Enable the gyroscope if requested
-                        Sensor gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-                        if (reportRateHz != 0 && gyroSensor != null) {
-                            deviceContext.gyroListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager);
-                            sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / reportRateHz);
-                        }
-                        break;
-                }
-                break;
-            }
-        }
+        controllerSensorManager.handleSetMotionEventState(
+                controllerNumber,
+                motionType,
+                reportRateHz,
+                getActiveSensorTargets(),
+                sm -> sm == deviceSensorManager
+        );
     }
 
     public void handleSetControllerLED(short controllerNumber, byte r, byte g, byte b) {
@@ -2443,12 +2057,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (int i = 0; i < inputDeviceContexts.size(); i++) {
                 InputDeviceContext deviceContext = inputDeviceContexts.valueAt(i);
-
-                // Ignore input devices without an RGB LED
                 if (deviceContext.controllerNumber == controllerNumber && deviceContext.hasRgbLed) {
-                    // Convert the RGB components into the integer value that LightState uses
-                    deviceContext.ledArgbValue = 0xFF000000 | ((r << 16) & 0xFF0000) | ((g << 8) & 0xFF00) | (b & 0xFF);
-
+                    deviceContext.ledArgbValue = ControllerLightsManager.INSTANCE.packRgbToArgb(r, g, b);
                     backgroundThreadHandler.removeCallbacks(deviceContext.setLedStateRunnable);
                     backgroundThreadHandler.post(deviceContext.setLedStateRunnable);
                 }
@@ -2482,11 +2092,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             try {
                 Thread.sleep(ControllerHandler.MINIMUM_BUTTON_DOWN_TIME_MS - buttonDownTime);
             } catch (InterruptedException e) {
-                e.printStackTrace();
-
-                // InterruptedException clears the thread's interrupt status. Since we can't
-                // handle that here, we will re-interrupt the thread to set the interrupt
-                // status back to true.
+                LimeLog.warning("Interrupted during button down delay");
                 Thread.currentThread().interrupt();
             }
         }
@@ -3113,7 +2719,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     }
 
-    class InputDeviceContext extends GenericControllerContext {
+    class InputDeviceContext extends GenericControllerContext implements RumbleTarget, SensorTarget, LightsTarget {
         public String name;
         public VibratorManager vibratorManager;
         public Vibrator vibrator;
@@ -3214,59 +2820,87 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             @TargetApi(Build.VERSION_CODES.S)
             @Override
             public void run() {
-                LightState lightState = new LightState.Builder().setColor(ledArgbValue).build();
-
-                // Set the RGB value for each RGB-controllable LED on the device
-                boolean hasRgbLight = false;
-                LightsRequest.Builder lightsRequestBuilder = new LightsRequest.Builder();
-                for (Light light : inputDevice.getLightsManager().getLights()) {
-                    if (light.hasRgbControl()) {
-                        lightsRequestBuilder.addLight(light, lightState);
-                        hasRgbLight = true;
-                    }
-                }
-
-                if (hasRgbLight) {
-                    // Create a new light session if one doesn't already exist
-                    if (lightsSession == null) {
-                        lightsSession = inputDevice.getLightsManager().openSession();
-                    }
-
-                    // Apply the LED changes
-                    lightsSession.requestLights(lightsRequestBuilder.build());
-                }
+                ControllerLightsManager.INSTANCE.applyLedState(InputDeviceContext.this, ledArgbValue);
             }
         };
+
+        // RumbleTarget
+        @Override
+        public short getControllerNumber() { return controllerNumber; }
+        @Override
+        public short getLowFreqMotor() { return lowFreqMotor; }
+        @Override
+        public void setLowFreqMotor(short value) { lowFreqMotor = value; }
+        @Override
+        public short getHighFreqMotor() { return highFreqMotor; }
+        @Override
+        public void setHighFreqMotor(short value) { highFreqMotor = value; }
+        @Override
+        public short getLeftTriggerMotor() { return leftTriggerMotor; }
+        @Override
+        public void setLeftTriggerMotor(short value) { leftTriggerMotor = value; }
+        @Override
+        public short getRightTriggerMotor() { return rightTriggerMotor; }
+        @Override
+        public void setRightTriggerMotor(short value) { rightTriggerMotor = value; }
+        @Override
+        public VibratorManager getVibratorManager() { return vibratorManager; }
+        @Override
+        public Vibrator getVibrator() { return vibrator; }
+        @Override
+        public boolean getHasQuadVibrators() { return quadVibrators; }
+        @Override
+        public InputDevice getInputDevice() { return inputDevice; }
+        @Override
+        public boolean rumbleCustom(short lowFreqMotor, short highFreqMotor) { return false; }
+        @Override
+        public boolean rumbleTriggersCustom(short leftTrigger, short rightTrigger) { return false; }
+
+        // SensorTarget
+        @Override
+        public SensorManager getSensorManager() { return sensorManager; }
+        @Override
+        public SensorEventListener getGyroListener() { return gyroListener; }
+        @Override
+        public void setGyroListener(SensorEventListener listener) { gyroListener = listener; }
+        @Override
+        public short getGyroReportRateHz() { return gyroReportRateHz; }
+        @Override
+        public void setGyroReportRateHz(short rate) { gyroReportRateHz = rate; }
+        @Override
+        public SensorEventListener getAccelListener() { return accelListener; }
+        @Override
+        public void setAccelListener(SensorEventListener listener) { accelListener = listener; }
+        @Override
+        public short getAccelReportRateHz() { return accelReportRateHz; }
+        @Override
+        public void setAccelReportRateHz(short rate) { accelReportRateHz = rate; }
+
+        // LightsTarget
+        @Override
+        public boolean getHasRgbLed() { return hasRgbLed; }
+        @Override
+        public LightsManager.LightsSession getLightsSession() { return lightsSession; }
+        @Override
+        public void setLightsSession(LightsManager.LightsSession session) { lightsSession = session; }
+        @Override
+        public int getLedArgbValue() { return ledArgbValue; }
+        @Override
+        public void setLedArgbValue(int value) { ledArgbValue = value; }
 
         @Override
         public void destroy() {
             super.destroy();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibratorManager != null) {
-                vibratorManager.cancel();
-            }
-            else if (vibrator != null) {
-                vibrator.cancel();
-            }
+            controllerRumbleManager.cancel(this);
 
             backgroundThreadHandler.removeCallbacks(enableSensorRunnable);
             backgroundThreadHandler.removeCallbacks(setLedStateRunnable);
 
-            if (gyroListener != null) {
-                sensorManager.unregisterListener(gyroListener);
-            }
-            if (accelListener != null) {
-                sensorManager.unregisterListener(accelListener);
-            }
+            controllerSensorManager.disableSensors(this);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (lightsSession != null) {
-                    try {
-                        lightsSession.close();
-                    } catch (RuntimeException e) {
-                        LimeLog.warning("Error closing LightsSession: " + e.getMessage());
-                    }
-                }
+                ControllerLightsManager.INSTANCE.closeSession(this);
             }
 
             backgroundThreadHandler.removeCallbacks(batteryStateUpdateRunnable);
@@ -3444,20 +3078,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             // Stop any pending enablement
             backgroundThreadHandler.removeCallbacks(enableSensorRunnable);
 
-            // Unregister all sensor listeners
-            if (gyroListener != null) {
-                sensorManager.unregisterListener(gyroListener);
-                gyroListener = null;
-
-                // Send a gyro event to ensure the virtual controller is stationary
-                conn.sendControllerMotionEvent((byte) controllerNumber, MoonBridge.LI_MOTION_TYPE_GYRO, 0.f, 0.f, 0.f);
-            }
-            if (accelListener != null) {
-                sensorManager.unregisterListener(accelListener);
-                accelListener = null;
-
-                // We leave the acceleration as-is to preserve the attitude of the controller
-            }
+            controllerSensorManager.disableSensors(this);
         }
 
         public void enableSensors() {
@@ -3470,6 +3091,24 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     class UsbDeviceContext extends InputDeviceContext {
         public AbstractController device;
+
+        @Override
+        public boolean rumbleCustom(short lowFreqMotor, short highFreqMotor) {
+            if (device != null) {
+                device.rumble(lowFreqMotor, highFreqMotor);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean rumbleTriggersCustom(short leftTrigger, short rightTrigger) {
+            if (device != null) {
+                device.rumbleTriggers(leftTrigger, rightTrigger);
+                return true;
+            }
+            return false;
+        }
 
 //        @Override
 //        public void destroy() {
