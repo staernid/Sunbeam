@@ -11,6 +11,7 @@ gson = "2.13.1"
 androidxAnnotation = "1.9.1"
 androidxCardview = "1.0.0"
 androidxAppcompat = "1.7.1"
+androidxDatastore = "1.1.2"
 androidxPreference = "1.2.1"
 androidxRecyclerview = "1.4.0"
 material = "1.13.0"
@@ -39,6 +40,8 @@ gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
+androidx-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
+androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "androidxDatastore" }
 androidx-preference = { module = "androidx.preference:preference", version.ref = "androidxPreference" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidxRecyclerview" }
 material = { module = "com.google.android.material:material", version.ref = "material" }

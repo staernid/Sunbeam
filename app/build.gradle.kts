@@ -65,6 +65,7 @@ android {
 dependencies {
     implementation(project(":core:native"))
     implementation(project(":core:stream"))
+    implementation(project(":core:preferences"))
 
     implementation(libs.bouncycastle.bcprov)
     implementation(libs.bouncycastle.bcpkix)

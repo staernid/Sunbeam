@@ -18,4 +18,5 @@ rootProject.name = "sunbeam"
 includeBuild("plugins")
 include(":core:native")
 include(":core:stream")
+include(":core:preferences")
 include(":app")

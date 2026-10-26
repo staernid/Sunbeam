@@ -32,9 +32,10 @@ class VirtualControlsManager
         private val controllerHandler: ControllerHandler?,
         private val connectionProvider: () -> NvConnection?,
         private val isOnExternalDisplay: () -> Boolean = { false },
-        private val onToggleExternalKeyboard: Runnable = Runnable {
-            ExternalDisplayControlActivity.toggleFullKeyboard()
-        },
+        private val onToggleExternalKeyboard: Runnable =
+            Runnable {
+                ExternalDisplayControlActivity.toggleFullKeyboard()
+            },
         private val virtualControllerFactory: VirtualControllerFactory = { ch, layout, ctx ->
             VirtualController(ch, layout, ctx)
         },
