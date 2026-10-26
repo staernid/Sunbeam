@@ -20,7 +20,7 @@ wrapped and tested before it is touched.
 - [x] Point `moonlight-common-c` submodule at upstream `moonlight-stream`
 - [x] Set `applicationId` to `io.github.staernid.sunbeam` and app label to Sunbeam
 - [x] Rename source package (`com.limelight` -> `io.github.staernid.sunbeam`)
-- [ ] CI on GitHub Actions: build, unit tests, lint. Drop `appveyor.yml`
+- [x] CI on GitHub Actions: build, unit tests, lint. Drop `appveyor.yml`
 
 ## Phase 1: Build foundation
 
