@@ -27,7 +27,7 @@ wrapped and tested before it is touched.
 - [x] Version catalog (`libs.versions.toml`), Gradle Kotlin DSL, Kotlin 2.x support
 - [x] Toolchain: JDK 17 target compatibility, `targetSdk` 36, core library desugaring (triage B13-B17 aligned; NDK r27 kept for CI/workstation compatibility)
 - [x] Convention plugins in `plugins/` (`sunbeam.android.application`, `sunbeam.android.library`, `sunbeam.android.compose`, `sunbeam.lint`)
-- [ ] Strip `minSdk 21` legacy; choose a new floor (Voice uses 28) after checking the device base
+- [x] Strip `minSdk 21` legacy; set floor to API 28 (Android 9.0 Pie) aligning with Voice
 - [x] Flavors: collapsed legacy `root`/`nonRoot` and `game` down to standard `debug` and `release` variants
 - [x] Lint, ktlint, detekt and Compose stability config
 
@@ -74,7 +74,7 @@ Each screen: `features:<name>` module, UI + presenter (Molecule or ViewModel, to
 
 ## Open questions
 
-- Final `applicationId`
-- New `minSdk`
+- Final `applicationId` (currently `io.github.staernid.sunbeam`)
+- New `minSdk` (Decided: 28, matching Voice)
 - DI choice (Metro as in Voice, or Hilt/Koin)
 - Does SBS 3D / MiDaS stay in the core app or become an optional module?
