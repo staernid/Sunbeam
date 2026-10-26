@@ -2,7 +2,7 @@ Quick-start guide: writing JVM/Robolectric unit tests for this repo
 ===================================================================
 
 0.  Where tests live  
-    • Path: `app/src/test/java/com/limelight/...` (plain JVM tests, *not* instrumented).  
+    • Path: `app/src/test/java/io/github/staernid/sunbeam/...` (plain JVM tests, *not* instrumented).  
     • Build task:  
       – Default flavour: `./gradlew :app:testNonRoot_gameDebugUnitTest`  
       – Root flavour:   `./gradlew :app:testRootDebugUnitTest`  
@@ -27,8 +27,8 @@ Quick-start guide: writing JVM/Robolectric unit tests for this repo
     ```java
     @Config(sdk = {33},
             shadows = {
-                com.limelight.shadows.ShadowMoonBridge.class,
-                com.limelight.shadows.ShadowGameManager.class})
+                io.github.staernid.sunbeam.shadows.ShadowMoonBridge.class,
+                io.github.staernid.sunbeam.shadows.ShadowGameManager.class})
     @RunWith(RobolectricTestRunner.class)
     public class MyFeatureTest {
         private Context ctx;
@@ -129,18 +129,18 @@ Quick-start guide: writing JVM/Robolectric unit tests for this repo
     ```
 
     ```java
-    package com.limelight.myfeature;
+    package io.github.staernid.sunbeam.myfeature;
 
     import android.content.Context;
     import androidx.test.core.app.ApplicationProvider;
-    import com.limelight.TestLogSuppressor;
+    import io.github.staernid.sunbeam.TestLogSuppressor;
     import org.junit.*;
     import org.robolectric.*;
     import org.robolectric.annotation.Config;
 
     @Config(sdk = {33},
-            shadows = {com.limelight.shadows.ShadowMoonBridge.class,
-                       com.limelight.shadows.ShadowGameManager.class})
+            shadows = {io.github.staernid.sunbeam.shadows.ShadowMoonBridge.class,
+                       io.github.staernid.sunbeam.shadows.ShadowGameManager.class})
     @RunWith(RobolectricTestRunner.class)
     public class AwesomeFeatureTest {
         private Context ctx;
@@ -170,8 +170,8 @@ Android emulator or `androidTest` instrumentation.
 ```java
     @Config(sdk = {33},
             shadows = {
-                com.limelight.shadows.ShadowMoonBridge.class,
-                com.limelight.shadows.ShadowGameManager.class})
+                io.github.staernid.sunbeam.shadows.ShadowMoonBridge.class,
+                io.github.staernid.sunbeam.shadows.ShadowGameManager.class})
     @RunWith(RobolectricTestRunner.class)
     public class MyFeatureTest {
         private Context ctx;
@@ -235,18 +235,18 @@ Android emulator or `androidTest` instrumentation.
 ```
 
 ```java
-    package com.limelight.myfeature;
+    package io.github.staernid.sunbeam.myfeature;
 
     import android.content.Context;
     import androidx.test.core.app.ApplicationProvider;
-    import com.limelight.TestLogSuppressor;
+    import io.github.staernid.sunbeam.TestLogSuppressor;
     import org.junit.*;
     import org.robolectric.*;
     import org.robolectric.annotation.Config;
 
     @Config(sdk = {33},
-            shadows = {com.limelight.shadows.ShadowMoonBridge.class,
-                       com.limelight.shadows.ShadowGameManager.class})
+            shadows = {io.github.staernid.sunbeam.shadows.ShadowMoonBridge.class,
+                       io.github.staernid.sunbeam.shadows.ShadowGameManager.class})
     @RunWith(RobolectricTestRunner.class)
     public class AwesomeFeatureTest {
         private Context ctx;

@@ -2,26 +2,26 @@
 -dontobfuscate
 
 # Our code
--keep class com.limelight.binding.input.evdev.* {*;}
+-keep class io.github.staernid.sunbeam.binding.input.evdev.* {*;}
 
 # KeyMapper - keep all VK_* fields for reflection
--keep class com.limelight.utils.KeyMapper {*;}
+-keep class io.github.staernid.sunbeam.utils.KeyMapper {*;}
 
 # KeyConfigHelper - keep classes and fields for Gson
--keep class com.limelight.utils.KeyConfigHelper {*;}
--keep class com.limelight.utils.KeyConfigHelper$ShortcutFile {*;}
--keep class com.limelight.utils.KeyConfigHelper$Shortcut {*;}
+-keep class io.github.staernid.sunbeam.utils.KeyConfigHelper {*;}
+-keep class io.github.staernid.sunbeam.utils.KeyConfigHelper$ShortcutFile {*;}
+-keep class io.github.staernid.sunbeam.utils.KeyConfigHelper$Shortcut {*;}
 
 # Keep TensorFlow Lite GPU delegate classes that R8 might incorrectly remove
 -keep class org.tensorflow.lite.gpu.** { *; }
 -keep class org.opencv.** { *; }
 
 # Profiles
--keep class com.limelight.profiles.ProfilesManager$ProfilesData {*;}
--keep class com.limelight.profiles.SettingsProfile {*;}
+-keep class io.github.staernid.sunbeam.profiles.ProfilesManager$ProfilesData {*;}
+-keep class io.github.staernid.sunbeam.profiles.SettingsProfile {*;}
 
 # Moonlight common
--keep class com.limelight.nvstream.jni.* {*;}
+-keep class io.github.staernid.sunbeam.nvstream.jni.* {*;}
 
 # Okio
 -keep class sun.misc.Unsafe {*;}

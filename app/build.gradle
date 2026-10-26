@@ -5,7 +5,7 @@ android {
 
     compileSdk = 36
 
-    namespace 'com.limelight'
+    namespace 'io.github.staernid.sunbeam'
 
     defaultConfig {
         minSdk 21

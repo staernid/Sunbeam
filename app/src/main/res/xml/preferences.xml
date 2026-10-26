@@ -25,7 +25,7 @@
             android:summary="@string/summary_fps_list"
             android:title="@string/title_fps_list"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:dialogMessage="@string/summary_seekbar_bitrate"
             android:key="seekbar_bitrate_kbps"
             android:max="300000"
@@ -37,7 +37,7 @@
             seekbar:keyStep="1000"
             seekbar:min="500"
             seekbar:step="500" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:dialogMessage="@string/summary_seekbar_metered_bitrate"
             android:key="seekbar_metered_bitrate_kbps"
             android:max="300000"
@@ -106,7 +106,7 @@
             android:title="@string/title_top_center_display"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:dialogMessage=""
             android:key="seekbar_resolution_scale_factor"
@@ -171,7 +171,7 @@
             android:summary="@string/summary_render_mode"
             android:title="@string/title_render_mode"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:key="parallax_depth"
             android:dialogMessage=""
             android:text="%"
@@ -182,7 +182,7 @@
             seekbar:min="1"
             seekbar:step="1"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:key="convergence_ratio"
             android:dialogMessage=""
             android:text="%"
@@ -193,7 +193,7 @@
             seekbar:min="0"
             seekbar:step="1"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:key="balance_shift"
             android:dialogMessage=""
             android:text="%"
@@ -243,7 +243,7 @@
         android:title="@string/category_gamepad_settings"
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="5"
             android:key="seekbar_deadzone"
             android:max="20"
@@ -349,7 +349,7 @@
             android:summary="@string/summary_device_rumble"
             android:title="@string/title_device_rumble"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:dependency="checkbox_vibrate_fallback"
             android:key="seekbar_vibrate_fallback_strength"
@@ -408,7 +408,7 @@
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:title="@string/title_checkbox_absolute_mouse_mode"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:key="seekbar_trackpad_sensitivity_x"
             android:max="200"
@@ -418,7 +418,7 @@
             app:iconSpaceReserved="false"
             seekbar:min="-200"
             seekbar:step="10" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:key="seekbar_trackpad_sensitivity_y"
             android:max="200"
@@ -434,7 +434,7 @@
             android:summary="@string/summary_trackpad_drag_drop_vibration"
             android:title="@string/title_trackpad_drag_drop_vibration"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="250"
             android:key="seekbar_trackpad_drag_drop_threshold"
             seekbar:step="1"
@@ -535,7 +535,7 @@
             android:summary="@string/summary_checkbox_full_screen"
             android:defaultValue="true"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="90"
             android:key="seekbar_keyboard_axi_opacity"
             android:max="100"
@@ -551,7 +551,7 @@
             android:summary="@string/summary_onscreen_keyboard_autofit"
             android:title="@string/title_onscreen_keyboard_autofit"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="200"
             android:dependency="onscreen_keyboard_autofit"
             android:key="seekbar_onscreen_keyboard_height"
@@ -562,7 +562,7 @@
             app:iconSpaceReserved="false"
             seekbar:min="150"
             seekbar:step="10" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="1000"
             seekbar:min="150"
             android:max="1000"
@@ -613,7 +613,7 @@
             android:summary="@string/summary_enable_post_stream_toast"
             android:title="@string/title_enable_post_stream_toast"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SmallIconCheckboxPreference
+        <io.github.staernid.sunbeam.preferences.SmallIconCheckboxPreference
             android:key="checkbox_small_icon_mode"
             android:summary="@string/summary_checkbox_small_icon_mode"
             android:title="@string/title_checkbox_small_icon_mode"
@@ -674,7 +674,7 @@
             android:summary="@string/summary_show_guide_button"
             android:title="@string/title_show_guide_button"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="90"
             android:dependency="checkbox_show_onscreen_controls"
             android:dialogMessage="@string/summary_osc_opacity"
@@ -693,7 +693,7 @@
             android:summary="@string/summary_free_analog_stick"
             android:title="@string/title_free_analog_stick"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="20"
             android:dependency="checkbox_enable_analog_stick_new"
             android:dialogMessage="@string/summary_osc_opacity"
@@ -705,7 +705,7 @@
             app:iconSpaceReserved="false"
             seekbar:min="0"
             seekbar:step="1" />
-        <com.limelight.preferences.ConfirmDeleteOscPreference
+        <io.github.staernid.sunbeam.preferences.ConfirmDeleteOscPreference
             android:dialogMessage="@string/dialog_text_reset_osc"
             android:dialogTitle="@string/dialog_title_reset_osc"
             android:key="option_reset_osc_preference"
@@ -761,7 +761,7 @@
             android:title="@string/title_square_buttons"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.ConfirmDeleteKeyboardPreference
+        <io.github.staernid.sunbeam.preferences.ConfirmDeleteKeyboardPreference
             android:dependency="checkbox_enable_keyboard"
             android:dialogMessage="@string/dialog_text_reset_osc"
             android:dialogTitle="@string/dialog_title_reset_osc"
@@ -815,7 +815,7 @@
             android:title="@string/title_auto_touch_sensitivity"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:dependency="checkbox_enable_touch_sensitivity"
             android:key="seekbar_touch_sensitivity_opacity_x"
@@ -827,7 +827,7 @@
             seekbar:min="10"
             seekbar:step="10" />
 
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:dependency="checkbox_enable_touch_sensitivity"
             android:key="seekbar_touch_sensitivity_opacity_y"
@@ -839,7 +839,7 @@
             seekbar:min="10"
             seekbar:step="10" />
 
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:key="seekbar_touchpad_sensitivity_opacity"
             android:max="300"
@@ -850,7 +850,7 @@
             seekbar:min="10"
             seekbar:step="10" />
 
-        <com.limelight.preferences.SeekBarPreference
+        <io.github.staernid.sunbeam.preferences.SeekBarPreference
             android:defaultValue="100"
             android:key="seekbar_touchpad_sensitivity_y_opacity"
             android:max="300"
@@ -909,7 +909,7 @@
             android:title="@string/title_share_performance_logs_button"
             android:dependency="checkbox_enable_perf_logging"
             app:iconSpaceReserved="false" />
-        <com.limelight.preferences.WebLauncherPreference
+        <io.github.staernid.sunbeam.preferences.WebLauncherPreference
             url="https://github.com/ClassicOldSong/moonlight-android/wiki/Performance-Statistics-Collection"
             android:key="option_view_shared_pref_logs"
             android:summary="@string/summary_performance_link"
@@ -956,7 +956,7 @@
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
 
-        <com.limelight.preferences.LanguagePreference
+        <io.github.staernid.sunbeam.preferences.LanguagePreference
             android:defaultValue="default"
             android:entries="@array/language_names"
             android:entryValues="@array/language_values"
@@ -971,7 +971,7 @@
             android:title="@string/title_import_special_button"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.WebLauncherPreference
+        <io.github.staernid.sunbeam.preferences.WebLauncherPreference
             url="https://github.com/ClassicOldSong/moonlight-android/wiki/Custom-Special-Keys"
             android:key="option_help_custom_keys"
             android:summary="@string/summary_special_key_help"
@@ -984,14 +984,14 @@
             android:title="@string/title_debug_info"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.WebLauncherPreference
+        <io.github.staernid.sunbeam.preferences.WebLauncherPreference
             url="https://github.com/ClassicOldSong/moonlight-android/releases"
             android:key="option_software_release"
             android:summary="@string/summary_software_update"
             android:title="@string/title_software_update"
             app:iconSpaceReserved="false" />
 
-        <com.limelight.preferences.WebLauncherPreference
+        <io.github.staernid.sunbeam.preferences.WebLauncherPreference
             url="@string/obtainium_app_url"
             android:key="option_follow_update"
             android:summary="@string/summary_follow_update"

@@ -19,7 +19,7 @@ wrapped and tested before it is touched.
 - [x] Remove Apollo-only features (virtual display, server commands, clipboard sync, OTP). No migration of their settings
 - [x] Point `moonlight-common-c` submodule at upstream `moonlight-stream`
 - [x] Set `applicationId` to `io.github.staernid.sunbeam` and app label to Sunbeam
-- [ ] Rename source package (`com.limelight` -> `io.github.staernid.sunbeam`)
+- [x] Rename source package (`com.limelight` -> `io.github.staernid.sunbeam`)
 - [ ] CI on GitHub Actions: build, unit tests, lint. Drop `appveyor.yml`
 
 ## Phase 1: Build foundation

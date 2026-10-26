@@ -31,7 +31,7 @@ Verdict legend: **PORT** = take it as is, **ADAPT** = take the idea, our code di
 
 | # | Upstream commit(s) | What | Fork today | Rec. |
 |---|---|---|---|---|
-| 13 | `0dc4c4fe`, `31b70030` | Update moonlight-common-c, libopus 1.6.1, openssl 4.0.2 (prebuilt `.a` files moved `libopus/` to `opus/`) | Old | PORT. Large binary diff, do it as its own commit |
+| 13 | `0dc4c4fe`, `31b70030` | Update moonlight-common-c, libopus 1.6.1, openssl 4.0.2 (prebuilt `.a` files moved `libopus/` to `opus/`) | Ported in two separate commits | PORT | DONE (`3f700532`, `cc3e10f9`) |
 | 14 | `1fa0e2a0` | NDK r29 | r27 | PORT |
 | 15 | `9d8b073c`, `801dba1b`, `4b2221d3` | compileSdk/AGP 9.4, target API 36 | AGP 8.13, `targetSdk 34` | PORT. Subsumed by the rewrite's toolchain bump |
 | 16 | `9221a0ca` | JDK 17 | JDK 11 | PORT |
