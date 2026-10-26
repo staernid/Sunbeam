@@ -28,8 +28,13 @@ import io.github.staernid.sunbeam.binding.video.CrashListener;
 import io.github.staernid.sunbeam.binding.video.MediaCodecDecoderRenderer;
 import io.github.staernid.sunbeam.binding.video.MediaCodecHelper;
 import io.github.staernid.sunbeam.binding.video.PerfOverlayListener;
+import androidx.annotation.NonNull;
 import io.github.staernid.sunbeam.nvstream.NvConnection;
-import io.github.staernid.sunbeam.nvstream.NvConnectionListener;
+import io.github.staernid.sunbeam.stream.DefaultStreamConnectivityDriver;
+import io.github.staernid.sunbeam.stream.StreamErrorResolver;
+import io.github.staernid.sunbeam.stream.StreamLifecycleListener;
+import io.github.staernid.sunbeam.stream.StreamLifecycleManager;
+import io.github.staernid.sunbeam.stream.TerminationResolution;
 import io.github.staernid.sunbeam.nvstream.StreamConfiguration;
 import io.github.staernid.sunbeam.nvstream.http.ComputerDetails;
 import io.github.staernid.sunbeam.nvstream.http.NvApp;
@@ -136,7 +141,7 @@ import android.view.ViewGroup;
 
 
 public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
-        OnGenericMotionListener, OnTouchListener, NvConnectionListener, EvdevListener,
+        OnGenericMotionListener, OnTouchListener, StreamLifecycleListener, EvdevListener,
         OnSystemUiVisibilityChangeListener, GameGestures, StreamContainer.InputCallbacks,
         ExternalControllerView.InputCallbacks,
         PerfOverlayListener, UsbDriverService.UsbDriverStateListener, View.OnKeyListener {
@@ -183,13 +188,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private int currentOrientation;
 
     public NvConnection conn;
+    private StreamLifecycleManager lifecycleManager;
     private SpinnerDialog spinner;
-    private boolean displayedFailureDialog = false;
-    private boolean connecting = false;
     public boolean connected = false;
     private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
-    private boolean attemptedConnection = false;
     private int suppressPipRefCount = 0;
     private String pcName;
     private String appName;
@@ -522,7 +525,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         boolean isMetered = connMgr.isActiveNetworkMetered();
         if (isMetered) {
-            displayTransientMessage(getResources().getString(R.string.conn_metered));
+            onDisplayTransientMessage(getResources().getString(R.string.conn_metered));
         }
 
         // Make sure Wi-Fi is fully powered up
@@ -785,6 +788,24 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 httpsPort, uniqueId, config,
                 PlatformBinding.getCryptoProvider(this), serverCert);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
+        lifecycleManager = new StreamLifecycleManager(
+                conn,
+                controllerHandler,
+                decoderRenderer,
+                prefConfig,
+                httpConn,
+                quitOnStop,
+                appName,
+                new StreamErrorResolver(
+                        resId -> getResources().getString(resId),
+                        DefaultStreamConnectivityDriver.INSTANCE
+                ),
+                this,
+                () -> {
+                    Surface surface = streamContainer.getSurface();
+                    return surface != null && surface.isValid();
+                }
+        );
         keyboardTranslator = new KeyboardTranslator(prefConfig);
 
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
@@ -843,16 +864,17 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         //streamContainer.getHolder().addCallback(this);
 
         streamContainer.setOnSurfaceAvailable(() -> {
-            if (!attemptedConnection) {
+            if (lifecycleManager != null && !lifecycleManager.getHasAttemptedConnection()) {
                 LimeLog.info("Surface is available, starting connection...");
-                attemptedConnection = true;
 
                 // Der Decoder erhält die jeweils aktive Oberfläche vom Container
                 decoderRenderer.setRenderTarget(streamContainer.getSurface());
 
                 // Starten Sie die NvConnection
-                conn.start(new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio),
-                        decoderRenderer, Game.this);
+                lifecycleManager.startConnection(
+                        new AndroidAudioRenderer(Game.this, prefConfig.playHostAudio),
+                        decoderRenderer
+                );
             }
         });
 
@@ -1773,7 +1795,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         if (conn != null) {
             int videoFormat = decoderRenderer.getActiveVideoFormat();
 
-            displayedFailureDialog = true;
+            if (lifecycleManager != null) {
+                lifecycleManager.setHasDisplayedFailureDialog(true);
+            }
             stopConnection();
             String message = null;
             String selectedVideoFormat = "";
@@ -3289,114 +3313,36 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     @Override
-    public void stageStarting(final String stage) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (spinner != null) {
-                    spinner.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
-                }
-            }
-        });
-    }
-
-    @Override
-    public void stageComplete(String stage) {
-    }
-
-    private void stopConnection() {
-        if (connecting || connected) {
-            connecting = connected = false;
-            updatePipAutoEnter();
-
-            controllerHandler.stop();
-
-            // Update GameManager state to indicate we're no longer in game
-            UiHelper.notifyStreamEnded(this);
-
-            // Stop may take a few hundred ms to do some network I/O to tell
-            // the server we're going away and clean up. Let it run in a separate
-            // thread to keep things smooth for the UI. Inside moonlight-common,
-            // we prevent another thread from starting a connection before and
-            // during the process of stopping this one.
-            new Thread() {
-                public void run() {
-                    conn.stop();
-                    if (httpConn != null && quitOnStop) {
-                        try {
-                            sleep(1000);
-                            httpConn.quitApp();
-                            Game.this.runOnUiThread(() -> Toast.makeText(Game.this, Game.this.getResources().getString(R.string.applist_quit_success) + " " + appName, Toast.LENGTH_LONG).show());
-                        } catch (Exception e) {
-                            Game.this.runOnUiThread(() -> Toast.makeText(Game.this, e.getMessage(), Toast.LENGTH_LONG).show());
-                        }
-                    }
-                }
-            }.start();
+    public void onStageStarting(@NonNull String stage) {
+        if (spinner != null) {
+            spinner.setMessage(getResources().getString(R.string.conn_starting) + " " + stage);
         }
     }
 
     @Override
-    public boolean stageFailed(final String stage, final int portFlags, final int errorCode) {
-        // Perform a connection test if the failure could be due to a blocked port
-        // This does network I/O, so don't do it on the main thread.
-        final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443, portFlags);
+    public void onStageComplete(@NonNull String stage) {
+    }
 
-        if (errorCode == 0 && portFlags != 0 && (portTestResult == MoonBridge.ML_TEST_RESULT_INCONCLUSIVE || portTestResult == 0)) {
+    @Override
+    public void onStageFailedRetryUnlocking() {
+        if (spinner != null) {
             spinner.setMessage(getResources().getString(R.string.unlocking_or_starting));
-            return true;
+        }
+    }
+
+    @Override
+    public void onStageFailedError(@NonNull String title, @NonNull String message, boolean isVideoDecoderFailure) {
+        if (spinner != null) {
+            spinner.dismiss();
+            spinner = null;
         }
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
-                }
+        if (isVideoDecoderFailure) {
+            Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
+        }
 
-                if (!displayedFailureDialog) {
-                    displayedFailureDialog = true;
-                    LimeLog.severe(stage + " failed: " + errorCode);
-
-                    // If video initialization failed and the surface is still valid, display extra information for the user
-                    Surface currentSurface = streamContainer.getSurface();
-                    if (stage.contains("video") && currentSurface != null && currentSurface.isValid()) {
-                        Toast.makeText(Game.this, getResources().getText(R.string.video_decoder_init_failed), Toast.LENGTH_LONG).show();
-                    }
-
-                    String dialogText = getResources().getString(R.string.conn_error_msg) + " " + stage +" (error "+errorCode+")";
-
-                    switch (errorCode) {
-                        case 403: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_permission_denied) + " (" + getResources().getString(R.string.permission_launch_app) + ")";
-                            break;
-                        }
-                        case -408: {
-                            dialogText += "\n\n" + getResources().getString(R.string.error_msg_timeout);
-                            break;
-                        }
-                        default: {
-                            // do nothing
-                        }
-                    }
-
-                    if (portFlags != 0) {
-                        dialogText += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                MoonBridge.stringifyPortFlags(portFlags, "\n");
-                    }
-
-                    if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
-                        dialogText += "\n\n" + getResources().getString(R.string.nettest_text_blocked);
-                    }
-
-                    Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_error_title), dialogText, true);
-                    finishSecondScreen();
-                }
-            }
-        });
-
-        return false;
+        Dialog.displayDialog(Game.this, title, message, true);
+        finishSecondScreen();
     }
 
     private void finishSecondScreen() {
@@ -3413,157 +3359,71 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     @Override
-    public void connectionTerminated(final int errorCode) {
-        // Perform a connection test if the failure could be due to a blocked port
-        // This does network I/O, so don't do it on the main thread.
-        final int portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode);
-        final int portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER,443, portFlags);
+    public void onConnectionTerminated(@NonNull TerminationResolution resolution) {
+        // Let the display go to sleep now
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                // Let the display go to sleep now
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Stop processing controller input
+        controllerHandler.stop();
+        timerHandler.removeCallbacksAndMessages(null);
 
-                // Stop processing controller input
-                controllerHandler.stop();
-                timerHandler.removeCallbacksAndMessages(null);
+        // Ungrab input
+        setInputGrabState(false);
 
-                // Ungrab input
-                setInputGrabState(false);
-
-                if (!displayedFailureDialog) {
-                    displayedFailureDialog = true;
-                    LimeLog.severe("Connection terminated: " + errorCode);
-                    stopConnection();
-
-                    // Display the error dialog if it was an unexpected termination.
-                    // Otherwise, just finish the activity immediately.
-                    if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                        String message;
-
-                        if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                            // If we got a blocked result, that supersedes any other error message
-                            message = getResources().getString(R.string.nettest_text_blocked);
-                        }
-                        else {
-                            switch (errorCode) {
-                                case MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC:
-                                    message = getResources().getString(R.string.no_video_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_NO_VIDEO_FRAME:
-                                    message = getResources().getString(R.string.no_frame_received_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
-                                case MoonBridge.ML_ERROR_PROTECTED_CONTENT:
-                                    message = getResources().getString(R.string.early_termination_error);
-                                    break;
-
-                                case MoonBridge.ML_ERROR_FRAME_CONVERSION:
-                                    message = getResources().getString(R.string.frame_conversion_error);
-                                    break;
-
-                                default:
-                                    String errorCodeString;
-                                    // We'll assume large errors are hex values
-                                    if (Math.abs(errorCode) > 1000) {
-                                        errorCodeString = Integer.toHexString(errorCode);
-                                    }
-                                    else {
-                                        errorCodeString = Integer.toString(errorCode);
-                                    }
-                                    message = getResources().getString(R.string.conn_terminated_msg) + "\n\n" +
-                                            getResources().getString(R.string.error_code_prefix) + " " + errorCodeString;
-                                    break;
-                            }
-                        }
-
-                        if (portFlags != 0) {
-                            message += "\n\n" + getResources().getString(R.string.check_ports_msg) + "\n" +
-                                    MoonBridge.stringifyPortFlags(portFlags, "\n");
-                        }
-
-                        Dialog.displayDialog(Game.this, getResources().getString(R.string.conn_terminated_title),
-                                message, true);
-                    }
-                    else {
-                        finish();
-                    }
-                }
-            }
-        });
+        if (resolution instanceof TerminationResolution.ShowErrorDialog) {
+            TerminationResolution.ShowErrorDialog dialog = (TerminationResolution.ShowErrorDialog) resolution;
+            Dialog.displayDialog(Game.this, dialog.getTitle(), dialog.getMessage(), true);
+        } else {
+            finish();
+        }
     }
 
     @Override
-    public void connectionStatusUpdate(final int connectionStatus) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (prefConfig.disableWarnings) {
-                    return;
-                }
-
-                if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
-                    if (prefConfig.bitrate > 5000) {
-                        notificationOverlayView.setText(getResources().getString(R.string.slow_connection_msg));
-                    }
-                    else {
-                        notificationOverlayView.setText(getResources().getString(R.string.poor_connection_msg));
-                    }
-
-                    requestedNotificationOverlayVisibility = View.VISIBLE;
-                }
-                else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
-                    requestedNotificationOverlayVisibility = View.GONE;
-                }
-
-                if (!isHidingOverlays) {
-                    notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
-                }
+    public void onConnectionStatusUpdate(int connectionStatus) {
+        if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
+            if (prefConfig.bitrate > 5000) {
+                notificationOverlayView.setText(getResources().getString(R.string.slow_connection_msg));
+            } else {
+                notificationOverlayView.setText(getResources().getString(R.string.poor_connection_msg));
             }
-        });
+
+            requestedNotificationOverlayVisibility = View.VISIBLE;
+        } else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
+            requestedNotificationOverlayVisibility = View.GONE;
+        }
+
+        if (!isHidingOverlays) {
+            notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
+        }
     }
 
     @Override
-    public void connectionStarted() {
-        runOnUiThread(new Runnable() {
+    public void onConnectionStarted() {
+        if (spinner != null) {
+            spinner.dismiss();
+            spinner = null;
+        }
+
+        connected = true;
+        updatePipAutoEnter();
+
+        timerHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (spinner != null) {
-                    spinner.dismiss();
-                    spinner = null;
-                }
-
-                connected = true;
-                connecting = false;
-                updatePipAutoEnter();
-
-                // Hide the mouse cursor now after a short delay.
-                // Doing it before dismissing the spinner seems to be undone
-                // when the spinner gets displayed. On Android Q, even now
-                // is too early to capture. We will delay a second to allow
-                // the spinner to dismiss before capturing.
-                timerHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        setInputGrabState(true);
-                    }
-                }, 500);
-
-                // Keep the display on
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-                // Update GameManager state to indicate we're in game
-                UiHelper.notifyStreamConnected(Game.this);
-
-                // Ensure overlay toggle button visibility is properly set
-                setupOverlayToggleButton();
-
-                hideSystemUi(1000);
+                setInputGrabState(true);
             }
-        });
+        }, 500);
+
+        // Keep the display on
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        // Update GameManager state to indicate we're in game
+        UiHelper.notifyStreamConnected(Game.this);
+
+        // Ensure overlay toggle button visibility is properly set
+        setupOverlayToggleButton();
+
+        hideSystemUi(1000);
 
         if (prefConfig.usbDriver) {
             // Start the USB driver
@@ -3584,56 +3444,40 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     @Override
-    public void displayMessage(final String message) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
-            }
-        });
+    public void onDisplayMessage(@NonNull String message) {
+        Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
     }
 
     @Override
-    public void displayTransientMessage(final String message) {
-        if (!prefConfig.disableWarnings) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
-                }
-            });
+    public void onDisplayTransientMessage(@NonNull String message) {
+        Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onStreamEnding() {
+        connected = false;
+        updatePipAutoEnter();
+
+        controllerHandler.stop();
+
+        // Update GameManager state to indicate we're no longer in game
+        UiHelper.notifyStreamEnded(this);
+    }
+
+    @Override
+    public void onAppQuitSuccess(@NonNull String appName) {
+        Toast.makeText(Game.this, getResources().getString(R.string.applist_quit_success) + " " + appName, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onAppQuitFailure(@NonNull String message) {
+        Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
+    }
+
+    private void stopConnection() {
+        if (lifecycleManager != null) {
+            lifecycleManager.stopConnection();
         }
-    }
-
-    @Override
-    public void rumble(short controllerNumber, short lowFreqMotor, short highFreqMotor) {
-        if (prefConfig.enableRumble) {
-            LimeLog.info(String.format((Locale)null, "Rumble on gamepad %d: %04x %04x", controllerNumber, lowFreqMotor, highFreqMotor));
-            controllerHandler.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor);
-        }
-    }
-
-    @Override
-    public void rumbleTriggers(short controllerNumber, short leftTrigger, short rightTrigger) {
-        LimeLog.info(String.format((Locale)null, "Rumble on gamepad triggers %d: %04x %04x", controllerNumber, leftTrigger, rightTrigger));
-
-        controllerHandler.handleRumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
-    }
-
-    @Override
-    public void setHdrMode(boolean enabled, byte[] hdrMetadata) {
-        LimeLog.info("Display HDR mode: " + (enabled ? "enabled" : "disabled"));
-        decoderRenderer.setHdrMode(enabled, hdrMetadata);
-    }
-
-    @Override
-    public void setMotionEventState(short controllerNumber, byte motionType, short reportRateHz) {
-        controllerHandler.handleSetMotionEventState(controllerNumber, motionType, reportRateHz);
-    }
-
-    @Override
-    public void setControllerLED(short controllerNumber, byte r, byte g, byte b) {
-        controllerHandler.handleSetControllerLED(controllerNumber, r, g, b);
     }
 
     @Override
@@ -3695,7 +3539,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             throw new IllegalStateException("Surface destroyed before creation!");
         }
 
-        if (attemptedConnection) {
+        if (lifecycleManager != null && lifecycleManager.getHasAttemptedConnection()) {
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop();
 
