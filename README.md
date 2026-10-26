@@ -36,7 +36,6 @@ Direction: a full redesign in Kotlin and Compose. See [docs/ROADMAP.md](docs/ROA
 ### App
 - ✅ Host discovery (mDNS), manual add, PIN pairing, Wake-on-LAN
 - ✅ Per-host profiles
-- ⬜ Remove inherited Apollo-only features (virtual display, server commands, clipboard sync)
 - ⬜ Compose UI, Material 3, dynamic color
 - ⬜ Kotlin, coroutines, modular architecture
 - ⬜ Settings store on DataStore

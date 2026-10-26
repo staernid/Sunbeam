@@ -16,8 +16,8 @@ wrapped and tested before it is touched.
 - [ ] Cherry-port group A (bug fixes), then translations, then deps (own commits, `-x`)
 - [x] Name: Sunbeam, at github.com/staernid
 - [ ] Detach the fork (GitHub Support request). Keep history and `LICENSE.txt`
-- [ ] Remove Apollo-only features (virtual display, server commands, clipboard sync, OTP). No migration of their settings
-- [ ] Point `moonlight-common-c` submodule at upstream `moonlight-stream`, if our native code still builds against it
+- [x] Remove Apollo-only features (virtual display, server commands, clipboard sync, OTP). No migration of their settings
+- [x] Point `moonlight-common-c` submodule at upstream `moonlight-stream`
 - [ ] Rename package (`com.limelight`) and `applicationId` (proposed `io.github.staernid.sunbeam`), in one commit
 - [ ] CI on GitHub Actions: build, unit tests, lint. Drop `appveyor.yml`
 

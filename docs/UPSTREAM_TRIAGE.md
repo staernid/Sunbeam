@@ -62,7 +62,7 @@ These are not upstream commits, but the same review applies before we carry them
 | Whitespace and tab noise, `printStackTrace`, `Class.forName` reflection | Cleanup during the Kotlin port |
 | Disclaimer section in the old README | Personal history, removed from our README |
 | Apollo-only features (virtual display, server commands, clipboard sync, OTP pairing) | Decided: remove. We target official Sunshine only |
-| `moonlight-common-c` submodule points at `ClassicOldSong/moonlight-common-c` | May carry Apollo protocol changes. Switch to `moonlight-stream` upstream |
+| `moonlight-common-c` submodule | Done: now `moonlight-stream/moonlight-common-c` at `5f22801`. Newer upstream needs `callbacks.c` (`receiveTimeUs`/`enqueueTimeUs`) and `nanors` in `Android.mk` (see B13) |
 | SBS 3D with MiDaS v2 Lite | Niche, ships a model. Decide whether it stays in the core app |
 | `applicationId` `com.limelight`, `.noir` suffixes, package `com.limelight` | Rename required for a proper fork identity (see ROADMAP phase 0) |
 
