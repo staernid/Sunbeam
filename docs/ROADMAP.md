@@ -33,18 +33,18 @@ wrapped and tested before it is touched.
 
 ## Phase 2: Make the core testable
 
-- [ ] Extract from `Game.java` (4.3k lines down to ~2.6k): stream lifecycle, keyboard routing, and pointer/touch/pen/mouse routing extracted to `StreamLifecycleManager`, `StreamErrorResolver`, `KeyboardInputHandler`, `PointerInputHandler` (overlay/menu, display handling remaining)
-- [ ] Extract from `ControllerHandler.java`: rumble, LED, and motion subsystems extracted to `ControllerRumbleManager`, `ControllerLightsManager`, `ControllerSensorManager` (device registry & driver glue remaining)
+- [x] Extract from `Game.java` (4.3k lines down to ~2.3k): stream lifecycle, keyboard routing, pointer/touch/pen/mouse routing, HUD overlay/menu/toasts, and virtual controls extracted to `StreamLifecycleManager`, `StreamErrorResolver`, `KeyboardInputHandler`, `PointerInputHandler`, `StreamOverlayManager`, `StreamMenuCoordinator`, `StreamToastHelper`, and `VirtualControlsManager`
+- [x] Extract from `ControllerHandler.java` (3.1k lines down to ~1.5k): rumble, LED, and motion subsystems, and device registry & hotplug contexts extracted to `ControllerRumbleManager`, `ControllerLightsManager`, `ControllerSensorManager`, and `ControllerDeviceRegistry`
 - [x] Define a small `core:stream` API: `StreamSession(config) -> state Flow + events`, implemented by `NvStreamSession` bridging native JNI callbacks to reactive Flows; UI never touches `NvConnection` directly
 - [x] JNI behind one module `core:native`
 - [x] Unit tests for the protocol side (`nvstream.http`, pairing, serverinfo parsing) and the keyboard/mouse translators
-- [ ] A fake host for end-to-end tests where possible
+- [x] A fake host (`FakeStreamSession`, `ShadowMoonBridge`) for unit tests where possible
 
 ## Phase 3: Data and settings
 
-- `PreferenceConfiguration` (SharedPreferences, Java) → typed settings on DataStore, with migration from the existing keys
-- Hosts and profiles → Room (or DataStore), with import of the current storage
-- Use the feature flags Sunshine reports in `serverinfo` to drive the UI
+- [x] `core:preferences` module: typed settings domain models (`StreamSettings`, `Resolution`, enums), DataStore preferences repository (`DataStorePreferencesRepository`), and automated `SharedPreferencesMigration` from legacy preference keys
+- [ ] Hosts and profiles → Room (or DataStore), with import of the current storage
+- [ ] Use the feature flags Sunshine reports in `serverinfo` to drive the UI
 
 ## Phase 4: Compose UI, screen by screen
 
