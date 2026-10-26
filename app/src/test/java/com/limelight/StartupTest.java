@@ -50,8 +50,8 @@ public class StartupTest {
 
     @Test
     public void testApplicationStartup() {
-        // Test ArtemisApplication creation and initialization
-        ArtemisApplication app = new ArtemisApplication();
+        // Test SunbeamApplication creation and initialization
+        SunbeamApplication app = new SunbeamApplication();
         app.onCreate();
 
         // Verify ProfilesManager was initialized
