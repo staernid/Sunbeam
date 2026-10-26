@@ -35,4 +35,19 @@ public class ShadowMoonBridge {
 
     // stubbed methods used by code but not relevant to unit tests
     public static void cleanupBridge() {}
+
+    @Implementation
+    public static int sendControllerArrivalEvent(byte controllerNumber, short activeGamepadMask, byte type, int supportedButtonFlags, short capabilities) { return 0; }
+
+    @Implementation
+    public static int sendControllerBatteryEvent(byte controllerNumber, byte batteryState, byte batteryPercentage) { return 0; }
+
+    @Implementation
+    public static byte guessControllerType(int vendorId, int productId) { return 0; }
+
+    @Implementation
+    public static boolean guessControllerHasPaddles(int vendorId, int productId) { return false; }
+
+    @Implementation
+    public static boolean guessControllerHasShareButton(int vendorId, int productId) { return false; }
 }
