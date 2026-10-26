@@ -14,18 +14,18 @@ Verdict legend: **PORT** = take it as is, **ADAPT** = take the idea, our code di
 
 | # | Upstream commit | What | Status in fork | Rec. | Decision |
 |---|---|---|---|---|---|
-| 1 | `ddb674a9` | Android 16.1 native keyboard capture (`setKeyboardCaptureEnabled`, `CAPTURE_KEYBOARD`); Samsung `SemWindowManager` path kept as fallback and no longer logs when the class is absent. Fixes upstream #975, #1281, #1505 | Missing. Samsung-only reflection hack | PORT | |
-| 2 | `b9c5eddd` | `KEYCODE_PLUS` needs Shift; host has a single `=/+` VK | Missing. `PLUS` and `EQUALS` both map to `0xbb`, so `+` types `=` | PORT | |
-| 3 | `3c6a0d12` | Rumble broken by deprecated `Vibrator` API; use `VibratorManager.getDefaultVibrator()` on API 31+ | Missing | PORT | |
-| 4 | `abde6021` | Controller LED crashes/ANRs: run `LightsSession` work on the background thread, guard `close()`, fix `hasRgbControl()` on <API 34 | Missing. LED code runs on the caller's thread | PORT | |
-| 5 | `8974dcda` | Keycodes from Android 15/16: F13-F24, `PRINT`, `SCREENSHOT` | Missing | PORT | |
-| 6 | `280454fd` | Xbox Series S/X init packets (`SERIES_S_INIT`, PIDs `0x0b05/0x0b12/0x0b13`, `0x02fe`) | Missing. Only older init packets | PORT | |
-| 7 | `583f662a` | 8BitDo vendor in `XboxOneController` | Present | none | |
-| 8 | `0711e236` | `GameManager` crashes on Meta Quest / partial OEM impls | Partial. We null-check, upstream also catches `Throwable` | ADAPT (add try/catch) | |
-| 9 | `6d4c64a5` | `Surface.setProducerThrottlingEnabled(false)` on the video surface, lower latency (API 37 guard) | Missing | PORT, measure first | |
-| 10 | `68adf9ec` | Stop H.264 `constraint_set`/`level_idc` SPS patching on Android 8+ | Missing (we still patch) | PORT, needs device testing | |
-| 11 | `c2e224eb` | Sync SDL joystick/HIDAPI code (`simplejni.c`, `usb_ids.h`) | Missing | PORT | |
-| 12 | `3df0103a` | Remove dead `< API 21` paths | n/a (our `minSdk` is 21) | PORT, trivial | |
+| 1 | `ddb674a9` | Android 16.1 native keyboard capture (`setKeyboardCaptureEnabled`, `CAPTURE_KEYBOARD`); Samsung `SemWindowManager` path kept as fallback and no longer logs when the class is absent. Fixes upstream #975, #1281, #1505 | Ported with reflection fallback for compileSdk < 37 | PORT | DONE (`987f9db4`) |
+| 2 | `b9c5eddd` | `KEYCODE_PLUS` needs Shift; host has a single `=/+` VK | Ported | PORT | DONE (`887bc9d5`) |
+| 3 | `3c6a0d12` | Rumble broken by deprecated `Vibrator` API; use `VibratorManager.getDefaultVibrator()` on API 31+ | Ported | PORT | DONE (`ab6af8a5`) |
+| 4 | `abde6021` | Controller LED crashes/ANRs: run `LightsSession` work on the background thread, guard `close()`, fix `hasRgbControl()` on <API 34 | Ported | PORT | DONE (`86c0d103`) |
+| 5 | `8974dcda` | Keycodes from Android 15/16: F13-F24, `PRINT`, `SCREENSHOT` | Ported | PORT | DONE (`5f3c6d6b`) |
+| 6 | `280454fd` | Xbox Series S/X init packets (`SERIES_S_INIT`, PIDs `0x0b05/0x0b12/0x0b13`, `0x02fe`) | Ported | PORT | DONE (`ce4886ce`) |
+| 7 | `583f662a` | 8BitDo vendor in `XboxOneController` | Present | none | ALREADY PRESENT |
+| 8 | `0711e236` | `GameManager` crashes on Meta Quest / partial OEM impls | Adapted with try/catch | ADAPT | DONE (`07e2ae49`) |
+| 9 | `6d4c64a5` | `Surface.setProducerThrottlingEnabled(false)` on the video surface, lower latency (API 37 guard) | Missing | PORT, measure first | Pending measurement |
+| 10 | `68adf9ec` | Stop H.264 `constraint_set`/`level_idc` SPS patching on Android 8+ | Missing (we still patch) | PORT, needs device testing | Pending device test |
+| 11 | `c2e224eb` | Sync SDL joystick code with upstream | Ported | PORT | DONE (`0d5b11ab`) |
+| 12 | `3df0103a` | Remove dead `< API 21` paths | n/a (our `minSdk` is 21) | PORT, trivial | Postponed to Phase 2 |
 
 ## B. Platform, build and dependencies
 

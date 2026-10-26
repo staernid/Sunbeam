@@ -12,13 +12,14 @@ wrapped and tested before it is touched.
 
 - [x] Add `artemis` and `moonlight` remotes
 - [x] Upstream triage ([UPSTREAM_TRIAGE.md](UPSTREAM_TRIAGE.md))
-- [ ] Review triage with the maintainer, mark decisions
-- [ ] Cherry-port group A (bug fixes), then translations, then deps (own commits, `-x`)
+- [x] Review triage with the maintainer, mark decisions
+- [x] Cherry-port group A (bug fixes) and new translations
 - [x] Name: Sunbeam, at github.com/staernid
 - [ ] Detach the fork (GitHub Support request). Keep history and `LICENSE.txt`
 - [x] Remove Apollo-only features (virtual display, server commands, clipboard sync, OTP). No migration of their settings
 - [x] Point `moonlight-common-c` submodule at upstream `moonlight-stream`
-- [ ] Rename package (`com.limelight`) and `applicationId` (proposed `io.github.staernid.sunbeam`), in one commit
+- [x] Set `applicationId` to `io.github.staernid.sunbeam` and app label to Sunbeam
+- [ ] Rename source package (`com.limelight` -> `io.github.staernid.sunbeam`)
 - [ ] CI on GitHub Actions: build, unit tests, lint. Drop `appveyor.yml`
 
 ## Phase 1: Build foundation
