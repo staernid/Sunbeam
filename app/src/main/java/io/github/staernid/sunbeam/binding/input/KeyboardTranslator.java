@@ -1,5 +1,6 @@
 package io.github.staernid.sunbeam.binding.input;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.hardware.input.InputManager;
 import android.os.Build;
@@ -180,6 +181,7 @@ public class KeyboardTranslator implements InputManager.InputDeviceListener {
      * @param deviceId InputDevice.getId() or -1 if unknown
      * @return a GFE keycode for the given keycode
      */
+    @SuppressLint("InlinedApi")
     public short translate(int keycode, int scancode, int deviceId) {
         int translated;
 

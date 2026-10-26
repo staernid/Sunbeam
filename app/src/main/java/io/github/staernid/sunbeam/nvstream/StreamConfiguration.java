@@ -14,7 +14,6 @@ public class StreamConfiguration {
     private int width, height;
     private float refreshRate;
     private float launchRefreshRate;
-    private int resolutionScaleFactor;
     private int clientRefreshRateX100;
     private int bitrate;
     private boolean sops;
@@ -60,11 +59,6 @@ public class StreamConfiguration {
             return this;
         }
 
-        public StreamConfiguration.Builder setResolutionScaleFactor(int scaleFactor) {
-            config.resolutionScaleFactor = scaleFactor;
-            return this;
-        }
-        
         public StreamConfiguration.Builder setBitrate(int bitrate) {
             config.bitrate = bitrate;
             return this;
@@ -152,7 +146,6 @@ public class StreamConfiguration {
         this.height = 720;
         this.refreshRate = 60;
         this.launchRefreshRate = 60;
-        this.resolutionScaleFactor = 100;
         this.bitrate = 10000;
         this.maxPacketSize = 1024;
         this.remote = STREAM_CFG_AUTO;
@@ -188,9 +181,6 @@ public class StreamConfiguration {
         }
     }
 
-
-    public int getResolutionScaleFactor() { return resolutionScaleFactor; }
-    
     public int getBitrate() {
         return bitrate;
     }

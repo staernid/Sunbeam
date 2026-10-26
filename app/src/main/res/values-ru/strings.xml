@@ -213,7 +213,6 @@
     <string name="no_frame_received_error">Ваше сетевое подключение не справляется с заданными настройками. Попробуйте изменить битрейт или использовать более быстрое подключение.</string>
     <string name="no_video_received_error">Видео от хоста не получено.</string>
     <string name="nettest_text_blocked">Текущее сетевое соединение вашего устройства блокирует Artemis. Потоковая передача через Интернет может не работать при подключении к этой сети.</string>
-    <string name="summary_resolution_scale_factor">Запрашиваемое на сервере виртуальное разрешение экрана будет умножено на этот коэффициент. Разрешение стрима не изменяется.\nПример: 120% превратит 2000×1000 в 2400×1200.\nПовышение коэффициента может улучшить качество изображения в некоторых играх.\nТребуется Apollo для применения.</string>
     <string name="resolution_prefix_native">Нативное</string>
     <string name="text_native_res_dialog">Режимы родного разрешения официально не поддерживаются GeForce Experience, поэтому он не будет устанавливать разрешение экрана вашего хоста самостоятельно. Вам нужно будет установить его вручную.
 \n
@@ -316,7 +315,6 @@
     <string name="email_chooser_title">Отправить журнал производительности...</string>
     <string name="toast_no_email_clients">Почтовые клиенты не установлены.</string>
     <string name="title_seekbar_metered_bitrate">Битрейт в тарифицируемых сетях</string>
-    <string name="title_resolution_scale_factor">Коэффициент масштабирования разрешения</string>
     <string name="title_checkbox_auto_invert_video_resolution">Авто-инверсия разрешения</string>
     <string name="summary_checkbox_auto_invert_video_resolution">Автоматически менять местами ширину и высоту видеопотока в портретном режиме.\nНапример: 1920×1080 станет 1080×1920.</string>
     <string name="title_video_scale_mode">Режим масштабирования видео</string>

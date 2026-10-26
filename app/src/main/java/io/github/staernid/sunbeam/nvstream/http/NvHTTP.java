@@ -841,7 +841,6 @@ public class NvHTTP {
             "appid=" + appId +
             (appUUID == null ? "" : ("&appuuid=" + appUUID)) +
             "&mode=" + context.negotiatedWidth + "x" + context.negotiatedHeight + "x" + fpsInt +
-            "&scaleFactor=" + context.streamConfig.getResolutionScaleFactor() +
             "&additionalStates=1&sops=" + (enableSops ? 1 : 0) +
             "&rikey="+bytesToHex(context.riKey.getEncoded()) +
             "&rikeyid="+context.riKeyId +
