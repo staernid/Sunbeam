@@ -33,7 +33,7 @@ wrapped and tested before it is touched.
 
 ## Phase 2: Make the core testable
 
-- [ ] Extract from `Game.java` (4.3k lines): stream lifecycle extracted to `StreamLifecycleManager` and `StreamErrorResolver` (input routing, overlay/menu, display handling remaining)
+- [ ] Extract from `Game.java` (4.3k lines down to ~2.6k): stream lifecycle, keyboard routing, and pointer/touch/pen/mouse routing extracted to `StreamLifecycleManager`, `StreamErrorResolver`, `KeyboardInputHandler`, `PointerInputHandler` (overlay/menu, display handling remaining)
 - [ ] Extract from `ControllerHandler.java`: rumble, LED, and motion subsystems extracted to `ControllerRumbleManager`, `ControllerLightsManager`, `ControllerSensorManager` (device registry & driver glue remaining)
 - [x] Define a small `core:stream` API: `StreamSession(config) -> state Flow + events`, implemented by `NvStreamSession` bridging native JNI callbacks to reactive Flows; UI never touches `NvConnection` directly
 - [x] JNI behind one module `core:native`
