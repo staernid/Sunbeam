@@ -1326,12 +1326,17 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     public void setMetaKeyCaptureState(boolean enabled) {
         // Android has native keyboard capture support starting in API 36.1
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA && Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
+        boolean keyboardCaptureSupported = false;
+        try {
             WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
-            windowLayoutParams.setKeyboardCaptureEnabled(enabled);
+            java.lang.reflect.Method setCaptureMethod = windowLayoutParams.getClass().getMethod("setKeyboardCaptureEnabled", boolean.class);
+            setCaptureMethod.invoke(windowLayoutParams, enabled);
             getWindow().setAttributes(windowLayoutParams);
+            keyboardCaptureSupported = true;
+        } catch (Throwable ignored) {
         }
-        else {
+
+        if (!keyboardCaptureSupported) {
             // This uses custom APIs present on some Samsung devices to allow capture of
             // meta key events while streaming.
             try {

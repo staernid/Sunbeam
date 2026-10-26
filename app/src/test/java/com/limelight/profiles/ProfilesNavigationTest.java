@@ -1,6 +1,7 @@
 package com.limelight.profiles;
 
 import android.content.Intent;
+import android.view.View;
 import android.widget.ImageButton;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -74,7 +75,7 @@ public class ProfilesNavigationTest {
         ActivityController<PcView> controller = Robolectric.buildActivity(PcView.class).setup();
         PcView pcView = controller.get();
 
-        ImageButton btn = pcView.findViewById(R.id.profilesButton);
+        View btn = pcView.findViewById(R.id.profilesButton);
         assertNotNull("profilesButton not found", btn);
 
         btn.performClick();
@@ -94,7 +95,7 @@ public class ProfilesNavigationTest {
         ActivityController<AppView> controller = Robolectric.buildActivity(AppView.class, intent).setup();
         AppView appView = controller.get();
 
-        ImageButton btn = appView.findViewById(R.id.profilesButton);
+        View btn = appView.findViewById(R.id.profilesButton);
         assertNotNull("profilesButton not found in AppView", btn);
 
         btn.performClick();
