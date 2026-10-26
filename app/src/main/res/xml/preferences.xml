@@ -83,12 +83,6 @@
             android:summary="@string/summary_checkbox_forceTightThresholds"
             android:title="@string/title_checkbox_forceTightThresholds"
             app:iconSpaceReserved="false" />
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="checkbox_use_virtual_display"
-            android:summary="@string/summary_checkbox_use_virtual_display"
-            android:title="@string/title_checkbox_use_virtual_display"
-            app:iconSpaceReserved="false" />
 
         <CheckBoxPreference
             android:defaultValue="false"
@@ -508,31 +502,6 @@
             android:key="checkbox_host_audio"
             android:summary="@string/summary_checkbox_host_audio"
             android:title="@string/title_checkbox_host_audio"
-            app:iconSpaceReserved="false" />
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        android:title="@string/category_general_settings"
-        app:initialExpandedChildrenCount="1"
-        app:iconSpaceReserved="false">
-
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="checkbox_smart_clipboard_sync"
-            android:summary="@string/summary_smart_clipboard_sync"
-            android:title="@string/title_smart_clipboard_sync"
-            app:iconSpaceReserved="false" />
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="checkbox_smart_clipboard_sync_toast"
-            android:summary="@string/summary_smart_clipboard_sync_toast"
-            android:title="@string/title_smart_clipboard_sync_toast"
-            app:iconSpaceReserved="false" />
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="checkbox_hide_clipboard_content"
-            android:summary="@string/summary_hide_clipboard_content"
-            android:title="@string/title_hide_clipboard_content"
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
@@ -978,12 +947,6 @@
             android:key="checkbox_full_range"
             android:summary="@string/summary_full_range"
             android:title="@string/title_full_range"
-            app:iconSpaceReserved="false" />
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="checkbox_prevent_packet_loss"
-            android:summary="@string/summary_prevent_packet_loss"
-            android:title="@string/title_prevent_packet_loss"
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 

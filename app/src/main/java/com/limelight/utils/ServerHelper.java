@@ -91,8 +91,7 @@ public class ServerHelper {
     }
 
     public static Intent createStartIntent(Activity parent, NvApp app, ComputerDetails computer,
-                                           ComputerManagerService.ComputerManagerBinder managerBinder,
-                                           boolean withVDisplay) {
+                                           ComputerManagerService.ComputerManagerBinder managerBinder) {
         Intent gameIntent = null;
         PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(parent);
         // Try to add secondary DisplayContext if supported and connected
@@ -112,8 +111,6 @@ public class ServerHelper {
         gameIntent.putExtra(Game.EXTRA_UNIQUEID, managerBinder.getUniqueId());
         gameIntent.putExtra(Game.EXTRA_PC_UUID, computer.uuid);
         gameIntent.putExtra(Game.EXTRA_PC_NAME, computer.name);
-        gameIntent.putExtra(Game.EXTRA_VDISPLAY, withVDisplay);
-        gameIntent.putExtra(Game.EXTRA_SERVER_COMMANDS, (ArrayList<String>) computer.serverCommands);
 
         try {
             if (computer.serverCert != null) {
@@ -142,15 +139,14 @@ public class ServerHelper {
             Activity parent,
             NvApp app,
             ComputerDetails computer,
-            ComputerManagerService.ComputerManagerBinder managerBinder,
-            boolean withVDisplay
+            ComputerManagerService.ComputerManagerBinder managerBinder
     ) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(parent, parent.getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Intent intent = createStartIntent(parent, app, computer, managerBinder, withVDisplay);
+        Intent intent = createStartIntent(parent, app, computer, managerBinder);
         parent.startActivity(intent);
     }
 

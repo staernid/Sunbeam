@@ -40,7 +40,6 @@
     <!-- PC view menu entries -->
     <string name="pcview_menu_app_list"> 浏览游戏列表 </string>
     <string name="pcview_menu_pair_pc"> 普通配对 </string>
-    <string name="pcview_menu_pair_pc_otp"> OTP配对 </string>
     <string name="pcview_menu_unpair_pc"> 取消配对 </string>
     <string name="pcview_menu_send_wol"> 发送 Wake-On-LAN 请求 </string>
     <string name="pcview_menu_delete_pc"> 删除电脑 </string>
@@ -55,14 +54,10 @@
     <string name="pair_pc_ingame">电脑正在游戏中，在配对之前你必须先退出游戏。</string>
     <string name="pair_pairing_title"> 配对中 </string>
     <string name="pair_pairing_msg"> 请在目标电脑上输入以下PIN码： </string>
-    <string name="pair_otp_pairing_msg">正在配对，请稍候…</string>
-    <string name="pair_otp_pairing_help">OTP 配对仅支持 Apollo，其他服务端请在 WebUI 上手动输入刚刚提供的PIN码。</string>
     <string name="pair_incorrect_pin"> PIN码或口令错误 </string>
     <string name="pair_fail"> 配对失败 </string>
     <string name="pair_already_in_progress"> 配对中，请稍候 </string>
-    <string name="pair_passphrase_hint">口令</string>
     <string name="pair_pin_length_msg">Pin必须为4个数字</string>
-    <string name="pair_passphrase_length_msg">口令至少需要4位</string>
     <!-- WOL messages -->
     <string name="wol_pc_online"> 电脑在线中 </string>
     <string name="wol_no_mac">无法唤醒电脑，因为没有存储的 MAC 地址</string>
@@ -119,12 +114,8 @@
     <string name="toast_no_logs">还没有统计过性能数据</string>
     <string name="applist_connect_msg"> 正在连接电脑…… </string>
     <string name="applist_menu_resume"> 恢复串流 </string>
-    <string name="applist_menu_start_vdisplay"> 在虚拟显示器中启动 </string>
-    <string name="applist_menu_start_primarydisplay"> 在主显示器中启动 </string>
     <string name="applist_menu_quit"> 退出串流 </string>
     <string name="applist_menu_quit_and_start"> 退出当前应用并启动 </string>
-    <string name="applist_menu_quit_and_start_vdisplay"> 退出当前应用并在虚拟显示器中启动 </string>
-    <string name="applist_menu_quit_and_start_primarydisplay"> 退出当前应用并在主显示器中启动 </string>
     <string name="applist_menu_cancel"> 取消 </string>
     <string name="applist_menu_details"> 查看详情 </string>
     <string name="applist_menu_scut"> 创建快捷方式 </string>
@@ -148,7 +139,6 @@
     <string name="addpc_enter_ip">请输入一个IP地址</string>
     <string name="addpc_wrong_sitelocal"> 该地址似乎不正确。 您必须使用路由器的公共IP地址通过Internet进行串流。 </string>
     <!-- Preferences -->
-    <string name="category_general_settings"> 通用设置 </string>
     <string name="category_video_settings"> 视频设置 </string>
     <string name="title_resolution_list"> 视频分辨率 </string>
     <string name="summary_resolution_list">高分辨率提升图像清晰度。低分辨率提升在低端设备和较慢网络中的串流体验。</string>
@@ -323,8 +313,6 @@
 \n尝试禁用 HDR 模式、更改流分辨率或更改主机 PC 的显示分辨率。</string>
     <string name="summary_full_range">如果你的设备无法正确显示全范围视频内容，这会导致明暗区域的细节丢失。</string>
     <string name="title_full_range">强制完全动态范围视频 (实验性)</string>
-    <string name="title_prevent_packet_loss">防止丢包</string>
-    <string name="summary_prevent_packet_loss">对于不明原因丢包的设备，可以尝试开启此选项。</string>
     <string name="pair_pairing_help">如果你的主机运行的是 Sunshine，请前往Sunshine的网页界面输入PIN码。</string>
     <string name="pcview_menu_eol">NVIDIA GameStream 终止服务</string>
     <string name="perf_overlay_hostprocessinglatency">主机处理延迟最小值/最大值/平均值: %1$.1f/%2$.1f/%3$.1f ms</string>
@@ -500,12 +488,6 @@
     <string name="summary_back_as_guide">按下手柄上的返回键时发送导航(PS/HOME)键</string>
     <string name="title_checkbox_ignore_synth_events">忽略合成事件</string>
     <string name="summary_ignore_synth_events">忽略 Android 系统发送的合成事件。可能可以解决某些设备上的鼠标点击触发其他非预期按键的问题。\n启用此选项会导致系统软键盘不工作。</string>
-    <string name="title_smart_clipboard_sync">智能剪贴板同步（实验性）</string>
-    <string name="summary_smart_clipboard_sync">在开始/恢复串流时自动同步本地剪贴板至服务端，在客户端失去焦点时自动同步服务端剪贴板至本地（需要Apollo）</string>
-    <string name="title_smart_clipboard_sync_toast">剪贴板同步通知</string>
-    <string name="summary_smart_clipboard_sync_toast">以 Toast 形式展示剪贴板同步结果</string>
-    <string name="title_hide_clipboard_content">隐藏剪贴板内容</string>
-    <string name="summary_hide_clipboard_content">将远端剪贴板标记为敏感信息</string>
     <string name="title_settings_misc">杂项</string>
     <string name="game_menu_send_keys_esc">ESC</string>
     <string name="game_menu_send_keys_f11">F11</string>
@@ -524,8 +506,6 @@
     <string name="summary_checkbox_enforce_display_mode">强制使用最佳显示模式。\n在某些系统(如ColorOS等)上必须启用才能正确设置刷新率/分辨率。\n请勿在ChromeCast 4K上启用此选项，可能会导致bug。</string>
     <string name="title_checkbox_ultra_low_latency">超低延迟（实验性）</string>
     <string name="summary_checkbox_ultra_low_latency">仅对高通8Gen2/8(s)Gen3/8Elite有效。</string>
-    <string name="title_checkbox_use_virtual_display">使用虚拟显示器</string>
-    <string name="summary_checkbox_use_virtual_display">默认使用虚拟显示器。\n虚拟显示器可以自动匹配设备端的分辨率与刷新率设置，提供无缝的串流体验。\n需要使用 Apollo 作为服务端串流软件。</string>
     <string name="title_checkbox_enable_sticky_modifier_key_virtual_keyboard">粘滞修饰键</string>
     <string name="summary_checkbox_enable_sticky_modifier_key_virtual_keyboard">在虚拟全键盘以及自定义键盘上使用粘滞修饰键。</string>
     <string name="title_checkbox_resume_without_confirm">快速恢复</string>
@@ -583,18 +563,6 @@
     <string name="game_dialog_title_quit_confirm">确定要退出吗？</string>
     <string name="game_dialog_message_quit_confirm">请确保当前没有未保存的进度。终止会话会导致当前运行的程序被强行停止。</string>
     <string name="game_menu_quit_session">终止会话</string>
-    <string name="game_menu_server_cmd">服务端命令</string>
-    <string name="game_menu_fetch_clipboard">获取剪贴板</string>
-    <string name="game_menu_upload_clipboard">上传剪贴板</string>
-    <string name="game_dialog_title_server_cmd_empty">无服务端命令</string>
-    <string name="game_dialog_message_server_cmd_empty">请确保你的服务端为 Apollo，并已授予此客户端"服务端命令"权限。</string>
-    <string name="vdisplay_not_ready">服务端虚拟显示器驱动未就绪。请确保 SudoVDA 驱动已正确安装并启用。</string>
-    <string name="vdisplay_not_supported"><![CDATA[此服务端不支持虚拟显示器。请使用 <a href=\"https://github.com/ClassicOldSong/Apollo\">Apollo</a> 作为服务端串流软件。]]></string>
-    <string name="clipboard_sync_unsupported">此服务器不支持剪贴板同步，请安装或升级服务端至最新的 Apollo。</string>
-    <string name="send_clipboard_failed">上传剪贴板失败：</string>
-    <string name="get_clipboard_failed">获取剪贴板失败：</string>
-    <string name="send_clipboard_success">上传剪贴板成功</string>
-    <string name="get_clipboard_success">获取剪贴板成功</string>
     <string name="proceed">继续</string>
     <string name="cancel">取消</string>
     <string name="configuration_mode_disable_enable_buttons">配置模式：启用禁用控件</string>
@@ -605,7 +573,6 @@
     <string name="error_msg_permission_denied">权限不足</string>
     <string name="error_msg_timeout">连接超时</string>
     <string name="permission_launch_app">启动APP</string>
-    <string name="permission_sync_clipboard">同步剪贴板</string>
 
     <string name="searchpreference_search">搜索…</string>
     <string name="searchpreference_clear">清除</string>

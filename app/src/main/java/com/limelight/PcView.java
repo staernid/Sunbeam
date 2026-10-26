@@ -76,8 +76,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     private ShortcutHelper shortcutHelper;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private boolean freezeUpdates, runningPolling, inForeground, completeOnCreateCalled;
-    private ComputerDetails.AddressTuple pendingPairingAddress;
-    private String pendingPairingPin, pendingPairingPassphrase;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -135,7 +133,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     private final static int TEST_NETWORK_ID = 10;
     private final static int GAMESTREAM_EOL_ID = 11;
     private final static int OPEN_MANAGEMENT_PAGE_ID = 20;
-    private final static int PAIR_ID_OTP = 21;
 
     private void initializeViews() {
         setContentView(R.layout.activity_pc_view);
@@ -251,20 +248,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             LimeLog.info("Cached GL Renderer: " + glPrefs.glRenderer);
             completeOnCreate();
         }
-
-        Intent intent = getIntent();
-
-        String hostname = intent.getStringExtra("hostname");
-        int port = intent.getIntExtra("port", NvHTTP.DEFAULT_HTTP_PORT);
-        pendingPairingPin = intent.getStringExtra("pin");
-        pendingPairingPassphrase = intent.getStringExtra("passphrase");
-
-        if (hostname != null && pendingPairingPin != null && pendingPairingPassphrase != null) {
-            pendingPairingAddress = new ComputerDetails.AddressTuple(hostname, port);
-        } else {
-            pendingPairingPin = null;
-            pendingPairingPassphrase = null;
-        }
     }
 
     private void completeOnCreate() {
@@ -303,19 +286,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                         if (details.pairState == PairState.PAIRED) {
                             shortcutHelper.createAppViewShortcutForOnlineHost(details);
 //                        } else
-                        }
-                            if (pendingPairingAddress != null) {
-                            if (
-                                details.state == ComputerDetails.State.ONLINE &&
-                                details.activeAddress.equals(pendingPairingAddress)
-                            ) {
-                                PcView.this.runOnUiThread(() -> {
-                                    doPair(details, pendingPairingPin, pendingPairingPassphrase);
-                                    pendingPairingAddress = null;
-                                    pendingPairingPin = null;
-                                    pendingPairingPassphrase = null;
-                                });
-                            }
                         }
                     }
                 }
@@ -431,8 +401,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
             menu.add(Menu.NONE, GAMESTREAM_EOL_ID, 2, getResources().getString(R.string.pcview_menu_eol));
         }
         else if (computer.details.pairState != PairState.PAIRED) {
-            menu.add(Menu.NONE, PAIR_ID_OTP, 1, getResources().getString(R.string.pcview_menu_pair_pc_otp));
-            menu.add(Menu.NONE, PAIR_ID, 2, getResources().getString(R.string.pcview_menu_pair_pc));
+            menu.add(Menu.NONE, PAIR_ID, 1, getResources().getString(R.string.pcview_menu_pair_pc));
             if (computer.details.nvidiaServer) {
                 menu.add(Menu.NONE, GAMESTREAM_EOL_ID, 3, getResources().getString(R.string.pcview_menu_eol));
             } else {
@@ -467,7 +436,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
         startComputerUpdates();
     }
 
-    private void doPair(final ComputerDetails computer, String otp, String passphrase) {
+    private void doPair(final ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(PcView.this, getResources().getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
             return;
@@ -497,25 +466,16 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                         success = true;
                     }
                     else {
-                        String pinStr = otp;
-                        if (pinStr == null) {
-                            pinStr = PairingManager.generatePinString();
-                        }
+                        String pinStr = PairingManager.generatePinString();
 
                         // Spin the dialog off in a thread because it blocks
-                        if (passphrase == null) {
-                            Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
-                                    getResources().getString(R.string.pair_pairing_msg)+" "+pinStr+"\n\n"+
-                                            getResources().getString(R.string.pair_pairing_help), false);
-                        } else {
-                            Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
-                                    getResources().getString(R.string.pair_otp_pairing_msg)+"\n\n"+
-                                            getResources().getString(R.string.pair_otp_pairing_help), false);
-                        }
+                        Dialog.displayDialog(PcView.this, getResources().getString(R.string.pair_pairing_title),
+                                getResources().getString(R.string.pair_pairing_msg)+" "+pinStr+"\n\n"+
+                                        getResources().getString(R.string.pair_pairing_help), false);
 
                         PairingManager pm = httpConn.getPairingManager();
 
-                        PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr, passphrase);
+                        PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
                         if (pairState == PairState.PIN_WRONG) {
                             message = getResources().getString(R.string.pair_incorrect_pin);
                         }
@@ -579,51 +539,6 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                 });
             }
         }).start();
-    }
-
-    private void doOTPPair(final ComputerDetails computer) {
-        Context context = PcView.this;
-
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 40);
-
-        final EditText otpInput = new EditText(context);
-        otpInput.setHint("PIN");
-        otpInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        otpInput.setFilters(new InputFilter[] { new InputFilter.LengthFilter(4) });
-
-        final EditText passphraseInput = new EditText(context);
-        passphraseInput.setHint(getString(R.string.pair_passphrase_hint));
-        passphraseInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-
-        layout.addView(otpInput);
-        layout.addView(passphraseInput);
-
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
-        dialogBuilder.setTitle(R.string.pcview_menu_pair_pc_otp);
-        dialogBuilder.setView(layout);
-
-        dialogBuilder.setPositiveButton(getString(R.string.proceed), null);
-
-        dialogBuilder.setNegativeButton(getString(R.string.cancel), (dialog, which) -> dialog.dismiss());
-        AlertDialog dialog = dialogBuilder.create();
-        dialog.show();
-
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String pin = otpInput.getText().toString();
-            String passphrase = passphraseInput.getText().toString();
-            if (pin.length() != 4) {
-                Toast.makeText(context, getString(R.string.pair_pin_length_msg), Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (passphrase.length() < 4 ) {
-                Toast.makeText(context, getString(R.string.pair_passphrase_length_msg), Toast.LENGTH_SHORT).show();
-                return;
-            }
-            doPair(computer, pin, passphrase);
-            dialog.dismiss(); // Manually dismiss the dialog if the input is valid
-        });
     }
 
     private void doWakeOnLan(final ComputerDetails computer) {
@@ -735,11 +650,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
         final ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
         switch (item.getItemId()) {
             case PAIR_ID:
-                doPair(computer.details, null, null);
-                return true;
-
-            case PAIR_ID_OTP:
-                doOTPPair(computer.details);
+                doPair(computer.details);
                 return true;
 
             case UNPAIR_ID:
@@ -777,7 +688,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                     return true;
                 }
 
-                ServerHelper.doStart(this, new NvApp("app", null, computer.details.runningGameId, false), computer.details, managerBinder, false);
+                ServerHelper.doStart(this, new NvApp("app", null, computer.details.runningGameId, false), computer.details, managerBinder);
                 return true;
 
             case QUIT_ID:
@@ -901,7 +812,7 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
                     openContextMenu(arg1);
                 } else if (computer.details.pairState != PairState.PAIRED) {
                     // Pair an unpaired machine by default
-                    doPair(computer.details, null, null);
+                    doPair(computer.details);
                 } else {
                     doAppList(computer.details, false, false);
                 }

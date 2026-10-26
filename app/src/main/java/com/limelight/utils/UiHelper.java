@@ -250,21 +250,6 @@ public class UiHelper {
         ((TextView)dialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
     }
 
-    public static void displayVdisplayConfirmationDialog(Activity parent, ComputerDetails computer, final Runnable onYes, final Runnable onNo) {
-        String message = computer.vDisplaySupported ?
-                parent.getResources().getString(R.string.vdisplay_not_ready) :
-                parent.getResources().getString(R.string.vdisplay_not_supported);
-        UiHelper.displayConfirmationDialog(
-                parent,
-                null,
-                message,
-                parent.getResources().getString(R.string.proceed),
-                parent.getResources().getString(R.string.cancel),
-                onYes,
-                onNo
-        );
-    }
-
     public static void displayQuitConfirmationDialog(Activity parent, final Runnable onYes, final Runnable onNo) {
         displayConfirmationDialog(
                 parent,

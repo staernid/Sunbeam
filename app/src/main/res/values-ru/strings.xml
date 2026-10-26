@@ -3,7 +3,6 @@
     <!-- PC view menu entries -->
     <string name="pcview_menu_app_list">Посмотреть список игр</string>
     <string name="pcview_menu_pair_pc">Сопряжение с ПК</string>
-    <string name="pcview_menu_pair_pc_otp">Сопряжение с ПК по OTP</string>
     <string name="pcview_menu_unpair_pc">Отменить сопряжение</string>
     <string name="pcview_menu_send_wol">Отправить Wake-On-LAN запрос</string>
     <string name="pcview_menu_delete_pc">Удалить ПК</string>
@@ -24,11 +23,9 @@
     <string name="pair_pc_ingame">Компьютер в данный момент находится в игре. Вы должны закрыть игру перед сопряжением.</string>
     <string name="pair_pairing_title">Сопряжение</string>
     <string name="pair_pairing_msg">Пожалуйста введите этот PIN на целевом ПК:</string>
-    <string name="pair_otp_pairing_help">Сопряжение по OTP доступно только с Apollo. При использовании другого ПО введите PIN вручную в веб-интерфейсе.</string>
     <string name="pair_incorrect_pin">Неправильный PIN</string>
     <string name="pair_fail">Сопряжение не удалось</string>
     <!-- WOL messages -->
-    <string name="pair_passphrase_length_msg">Пароль должен быть не менее 4 символов</string>
     <string name="wol_pc_online">Компьютер в сети</string>
     <string name="wol_no_mac">Невозможно разбудить компьютер, поскольку нет сохраненного MAC-адреса</string>
     <string name="wol_waking_pc">Пробуждение ПК…</string>
@@ -66,10 +63,8 @@
     <string name="lost_connection">Потеряно соединение с ПК</string>
     <!-- AppList activity -->
     <string name="applist_menu_resume">Возобновить сессию</string>
-    <string name="applist_menu_start_primarydisplay">Запустить на основном дисплее</string>
     <string name="applist_menu_quit">Выйти из сессии</string>
     <string name="applist_menu_quit_and_start">Выйти из текущей игры и запустить</string>
-    <string name="applist_menu_quit_and_start_primarydisplay">Завершить игру и запустить на основном дисплее</string>
     <string name="applist_menu_cancel">Отмена</string>
     <string name="applist_menu_export_launcher">Экспортировать файл запуска</string>
     <string name="applist_menu_tv_channel">Добавить в канал</string>
@@ -179,7 +174,6 @@
     <string name="pcview_menu_details">Посмотреть детали</string>
     <string name="poor_connection_msg">Слабое соединение с ПК</string>
     <string name="title_details">Детали</string>
-    <string name="summary_prevent_packet_loss">Для устройств, которые теряют пакеты по неизвестным причинам, можно попробовать включить эту опцию.</string>
     <string name="title_enable_perf_overlay">Включить отображение статистики</string>
     <string name="title_unlock_fps">Показать неподдерживаемые настройки частоты кадров</string>
     <string name="applist_details_id">ID приложения:</string>
@@ -317,15 +311,10 @@
     <string name="align_center">Выровнять по центру</string>
     <string name="pcview_menu_open_management_page">Открыть настройки сервера</string>
     <string name="pair_pc_confirm_title">Сопряжение с ПК</string>
-    <string name="pair_otp_pairing_msg">Сопряжение, подождите…</string>
-    <string name="pair_passphrase_hint">Пароль</string>
     <string name="pair_pin_length_msg">PIN должен состоять из 4 цифр</string>
     <string name="email_subject">Artemistics - журнал производительности</string>
     <string name="email_chooser_title">Отправить журнал производительности...</string>
     <string name="toast_no_email_clients">Почтовые клиенты не установлены.</string>
-    <string name="applist_menu_start_vdisplay">Запустить в виртуальном дисплее</string>
-    <string name="applist_menu_quit_and_start_vdisplay">Завершить игру и запустить в виртуальном дисплее</string>
-    <string name="category_general_settings">Общие настройки</string>
     <string name="title_seekbar_metered_bitrate">Битрейт в тарифицируемых сетях</string>
     <string name="title_resolution_scale_factor">Коэффициент масштабирования разрешения</string>
     <string name="title_checkbox_auto_invert_video_resolution">Авто-инверсия разрешения</string>
@@ -485,12 +474,6 @@
     <string name="summary_back_as_guide">Отправлять Guide (PS/HOME) при нажатии Back на контроллерах</string>
     <string name="title_checkbox_ignore_synth_events">Игнорировать синтетические события</string>
     <string name="summary_ignore_synth_events">Игнорировать синтетические события, отправляемые системой Android. Это может решить проблему, когда щелчки мыши вызывают другие неожиданные клавиши на некоторых устройствах.\nВключение этой опции приведёт к тому, что экранная клавиатура системы перестанет работать.</string>
-    <string name="title_smart_clipboard_sync">Умная синхронизация буфера (экспериментально)</string>
-    <string name="summary_smart_clipboard_sync">Автоматически загружать буфер на сервер при старте/возобновлении и скачивать при потере фокуса (требуется Apollo)</string>
-    <string name="title_smart_clipboard_sync_toast">Уведомление о синхронизации буфера</string>
-    <string name="summary_smart_clipboard_sync_toast">Показать уведомление о результате синхронизации буфера</string>
-    <string name="title_hide_clipboard_content">Скрывать содержимое буфера</string>
-    <string name="summary_hide_clipboard_content">Пометить удалённый буфер как конфиденциальный</string>
     <string name="title_settings_misc">РАЗНОЕ</string>
     <string name="perf_overlay_lite_bandwidth">Пропускная способность</string>
     <string name="perf_overlay_lite_network_decoding_delay">Задержка сети/декодирования</string>
@@ -503,8 +486,6 @@
     <string name="title_checkbox_ultra_low_latency">Сверхнизкая задержка (экспериментально)</string>
     <string name="summary_checkbox_ultra_low_latency">Эффективно только на SD8Gen2 / 8(s)Gen3 / 8Elite</string>
     <string name="summary_checkbox_forceTightThresholds">Более строгие пороги вертикальной синхронизации для снижения задержки; может увеличить количество сбоев.</string>
-    <string name="title_checkbox_use_virtual_display">Использовать виртуальный дисплей</string>
-    <string name="summary_checkbox_use_virtual_display">Использовать виртуальный дисплей по умолчанию.\nВиртуальный дисплей автоматически подбирает клиентское разрешение и частоту, обеспечивая плавный стрим.\nТребует Apollo на хосте.</string>
     <string name="title_checkbox_resume_without_confirm">Быстрое возобновление</string>
     <string name="summary_checkbox_resume_without_confirm">Не показывать меню возобновления, сразу возобновлять приложение.</string>
     <string name="title_checkbox_enable_sticky_modifier_key_virtual_keyboard">Фиксированные модификаторы</string>
@@ -562,14 +543,6 @@
     <string name="game_dialog_title_quit_confirm">Действительно хотите выйти?</string>
     <string name="game_dialog_message_quit_confirm">Убедитесь, что нет несохранённого прогресса. Завершение сессии закроет текущее приложение.</string>
     <string name="game_menu_quit_session">Завершить сессию</string>
-    <string name="game_menu_server_cmd">Команды сервера</string>
-    <string name="game_menu_fetch_clipboard">Получить буфер обмена</string>
-    <string name="game_menu_upload_clipboard">Отправить буфер обмена</string>
-    <string name="game_dialog_title_server_cmd_empty">Нет команд сервера</string>
-    <string name="game_dialog_message_server_cmd_empty">Убедитесь, что на сервере установлен Apollo и этому клиенту предоставлено разрешение Server Command.</string>
-    <string name="vdisplay_not_ready">Виртуальный драйвер дисплея на сервере не готов. Пожалуйста, убедитесь, что драйвер SudoVDA установлен и включён.</string>
-    <string name="clipboard_sync_unsupported">Этот сервер не поддерживает синхронизацию буфера. Установите или обновите сервер до последней версии Apollo.</string>
-    <string name="send_clipboard_failed">Не удалось отправить буфер обмена:</string>
     <string name="external_display_info">Внешний дисплей подключён с: %1$dx%2$d при %3$.1fГц</string>
     <string name="notification_channel_name">Управление внешним дисплеем</string>
     <string name="notification_title">Внешний дисплей активен</string>
@@ -577,16 +550,12 @@
     <string name="permission_denied">Разрешение на уведомления отклонено</string>
     <string name="no_external_display">Внешний дисплей не обнаружен</string>
     <string name="no_game_instance">Экземпляр игры недоступен</string>
-    <string name="get_clipboard_failed">Не удалось получить буфер обмена:</string>
-    <string name="send_clipboard_success">Буфер обмена успешно отправлен</string>
-    <string name="get_clipboard_success">Буфер обмена успешно получен</string>
     <string name="proceed">Продолжить</string>
     <string name="cancel">Отмена</string>
     <string name="unlocking_or_starting">Сервер запускается или компьютер разблокируется — подождите…</string>
     <string name="error_msg_permission_denied">Доступ запрещён</string>
     <string name="error_msg_timeout">Таймаут соединения</string>
     <string name="permission_launch_app">Запустить приложения</string>
-    <string name="permission_sync_clipboard">Синхр. буфера обмена</string>
     <string name="searchpreference_search">Поиск…</string>
     <string name="searchpreference_clear">Очистить</string>
     <string name="searchpreference_history_entry">Запись истории</string>
@@ -648,7 +617,6 @@
     <string name="email_prefix_message">"\n        Пожалуйста отправьте это письмо как есть на artemistics.logs@gmail.com чтобы поддержать сообщество. \n\n        Ваши данные о производительности помогут улучшить и расширить набор данных по ссылке: \n\n        https://tinyurl.com/artemis-performance       "</string>
     <string name="title_checkbox_remember_mouse_mode">Запоминать режим мыши</string>
     <string name="title_enable_rumble">Включить вибрацию</string>
-    <string name="title_prevent_packet_loss">Предотвращать потерю пакетов</string>
     <string name="perf_overlay_lite_net">%1$dмс</string>
     <string name="perf_overlay_lite_dectime">%1$.2fмс</string>
     <string name="summary_low_latency_frame_balance">Уменьшает задержку за счёт пропуска кадров в очереди</string>

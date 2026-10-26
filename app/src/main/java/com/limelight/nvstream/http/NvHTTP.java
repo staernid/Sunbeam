@@ -409,15 +409,6 @@ public class NvHTTP {
         // UUID is mandatory to determine which machine is responding
         details.uuid = getXmlString(serverInfo, "uniqueid", true);
 
-        String permStr = getXmlString(serverInfo, "Permission", false);
-        if (permStr != null) {
-            try {
-                details.permission = Integer.parseInt(permStr);
-            } catch (Exception ignored) {
-                details.permission = -1;
-            }
-        }
-
         details.httpsPort = getHttpsPort(serverInfo);
 
         details.macAddress = getXmlString(serverInfo, "mac", false);
@@ -428,13 +419,6 @@ public class NvHTTP {
         // This is missing on on recent GFE versions, but it's present on Sunshine
         details.externalPort = getExternalPort(serverInfo);
         details.remoteAddress = makeTuple(getXmlString(serverInfo, "ExternalIP", false), details.externalPort);
-
-        details.vDisplaySupported = getServerSupportsVDisplay(serverInfo);
-        if (details.vDisplaySupported) {
-            details.vDisplayDriverReady = getServerVDisplayDriverReady(serverInfo);
-        }
-
-        details.serverCommands = getServerCmds(serverInfo);
 
         details.pairState = getPairState(serverInfo);
         details.runningGameId = getCurrentGame(serverInfo);
@@ -545,28 +529,6 @@ public class NvHTTP {
     public String getServerVersion(String serverInfo) throws XmlPullParserException, IOException {
         // appversion is present in all supported GFE versions
         return getXmlString(serverInfo, "appversion", true);
-    }
-
-    public boolean getServerSupportsVDisplay(String serverInfo) throws XmlPullParserException, IOException {
-        String supportVdisplay = getXmlString(serverInfo, "VirtualDisplayCapable", false);
-        if (supportVdisplay == null) {
-            return false;
-        }
-
-        return supportVdisplay.equals("true");
-    }
-
-    public boolean getServerVDisplayDriverReady(String serverInfo) throws XmlPullParserException, IOException {
-        String driverReady = getXmlString(serverInfo, "VirtualDisplayDriverReady", false);
-        if (driverReady == null) {
-            return false;
-        }
-
-        return driverReady.equals("true");
-    }
-
-    public List<String> getServerCmds(String serverInfo) throws XmlPullParserException, IOException {
-        return getXmlArray(serverInfo, "ServerCommand", false);
     }
 
     public PairingManager.PairState getPairState() throws IOException, XmlPullParserException {
@@ -884,7 +846,6 @@ public class NvHTTP {
             "&rikey="+bytesToHex(context.riKey.getEncoded()) +
             "&rikeyid="+context.riKeyId +
             (!enableHdr ? "" : "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0&clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1&clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0") +
-            "&virtualDisplay=" + (context.streamConfig.getVirtualDisplay() ? 1 : 0) +
             "&localAudioPlayMode=" + (context.streamConfig.getPlayLocalAudio() ? 1 : 0) +
             "&surroundAudioInfo=" + context.streamConfig.getAudioConfiguration().getSurroundAudioInfo() +
             "&remoteControllersBitmap=" + context.streamConfig.getAttachedGamepadMask() +
@@ -917,22 +878,5 @@ public class NvHTTP {
         }
 
         return true;
-    }
-
-    public String getClipboard() throws IOException {
-        // Add type for future-proof
-        // Might return arbitrary type from host if not set
-        return openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true), "actions/clipboard", "type=text");
-    }
-
-    // We currently only support plain text
-    public Boolean sendClipboard(String content) throws IOException {
-        String resp = openHttpConnectionToString(httpClientLongConnectTimeout, getHttpsUrl(true), "actions/clipboard", "type=text", RequestBody.create(content, MediaType.parse("text/plain")));
-        // For handling the 200ed 404 from Sunshine
-        if (resp.isEmpty()) {
-            return true;
-        } else {
-            return false;
-        }
     }
 }

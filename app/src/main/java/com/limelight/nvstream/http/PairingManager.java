@@ -184,7 +184,7 @@ public class PairingManager {
         return serverCert;
     }
     
-    public PairState pair(String serverInfo, String pin, String passphrase) throws IOException, XmlPullParserException {
+    public PairState pair(String serverInfo, String pin) throws IOException, XmlPullParserException {
         PairingHashAlgorithm hashAlgo;
 
         int serverMajorVersion = http.getServerMajorVersion(serverInfo);
@@ -209,23 +209,6 @@ public class PairingManager {
         String pairingArguments = "phrase=getservercert&salt="+
                 saltStr+"&clientcert="+bytesToHex(pemCertBytes);
 
-        if (passphrase != null) {
-            try {
-                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                String plainText = pin + saltStr + passphrase;
-                byte[] hash = digest.digest(plainText.getBytes());
-
-                StringBuilder hexString = new StringBuilder();
-                for (byte b : hash) {
-                    hexString.append(String.format("%02X", b));
-                }
-
-                pairingArguments += "&otpauth=" + hexString;
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        
         // Send the salt and get the server cert. This doesn't have a read timeout
         // because the user must enter the PIN before the server responds
         String getCert = http.executePairingCommand(pairingArguments, false);

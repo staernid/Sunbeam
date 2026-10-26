@@ -202,19 +202,6 @@ public class AddComputerManually extends AppCompatActivity {
                         AddComputerManually.this.finish();
                     }
 
-                    String pin = uri.getQueryParameter("pin");
-                    String passphrase = uri.getQueryParameter("passphrase");
-                    if (pin != null && passphrase != null) {
-                        Intent intent = new Intent(AddComputerManually.this, PcView.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        intent.putExtra("hostname", uri.getHost());
-                        intent.putExtra("port", uri.getPort());
-                        intent.putExtra("pin", pin);
-                        intent.putExtra("passphrase", passphrase);
-
-                        startActivity(intent);
-                    }
-
                 }
             });
         }

@@ -27,7 +27,6 @@
 	<string name="pcview_menu_header_unknown">正在重新整理</string>
 	<string name="pcview_menu_app_list">檢視所有應用程式</string>
 	<string name="pcview_menu_pair_pc">傳統配對</string>
-	<string name="pcview_menu_pair_pc_otp">OTP 配對</string>
 	<string name="pcview_menu_unpair_pc">取消配對</string>
 	<string name="pcview_menu_send_wol">發送 Wake-On-LAN 請求</string>
 	<string name="pcview_menu_delete_pc">刪除電腦</string>
@@ -55,14 +54,10 @@
 	<string name="pair_pairing_title">正在配對</string>
 	<string name="pair_pairing_msg">請在目標電腦上輸入以下 PIN：</string>
 	<string name="pair_pairing_help">如果您的主機電腦正在執行 Sunshine，請進入 Sunshine 的網頁介面輸入 PIN。</string>
-	<string name="pair_otp_pairing_msg">正在進行配對，請稍候…</string>
-	<string name="pair_otp_pairing_help">OTP 配對僅適用於 Apollo，如果您使用其他主機軟體，請在網頁介面手動輸入剛剛提供的 PIN。</string>
 	<string name="pair_incorrect_pin">PIN 或密碼短語錯誤</string>
 	<string name="pair_fail">配對失敗</string>
 	<string name="pair_already_in_progress">配對已在進行中</string>
-	<string name="pair_passphrase_hint">密碼短語</string>
 	<string name="pair_pin_length_msg">PIN 必須是 4 位數字</string>
-	<string name="pair_passphrase_length_msg">密碼短語至少需 4 個字元</string>
 
 	<!-- WOL messages -->
 	<string name="wol_pc_online">電腦已上線</string>
@@ -151,12 +146,8 @@
 	<!-- AppList activity -->
 	<string name="applist_connect_msg">正在連線至電腦…</string>
 	<string name="applist_menu_resume">繼續工作階段</string>
-	<string name="applist_menu_start_vdisplay">在虛擬顯示器中啟動</string>
-	<string name="applist_menu_start_primarydisplay">在主要顯示器中啟動</string>
 	<string name="applist_menu_quit">結束工作階段</string>
 	<string name="applist_menu_quit_and_start">結束目前遊戲並啟動</string>
-	<string name="applist_menu_quit_and_start_vdisplay">結束目前遊戲並在虛擬顯示器中啟動</string>
-	<string name="applist_menu_quit_and_start_primarydisplay">結束目前遊戲並在主要顯示器中啟動</string>
 	<string name="applist_menu_cancel">取消</string>
 	<string name="applist_menu_details">檢視詳細資訊</string>
 	<string name="applist_menu_scut">建立捷徑</string>
@@ -183,7 +174,6 @@
 	<string name="addpc_wrong_sitelocal">該位址看起來不正確。若要透過網際網路進行串流，您必須使用路由器的公開 IP 位址。</string>
 
 	<!-- Preferences -->
-	<string name="category_general_settings">一般設定</string>
 	<string name="category_video_settings">影片設定</string>
 	<string name="title_resolution_list">影片解析度</string>
 	<string name="summary_resolution_list">提高以改善影像清晰度。降低以便在低階裝置和較慢的網路上獲得更佳效能。</string>
@@ -308,8 +298,6 @@
 	<string name="summary_enable_hdr">當遊戲與電腦 GPU 支援時，串流 HDR。HDR 需要支援 HEVC Main 10 編碼的 GPU。</string>
 	<string name="title_full_range">強制全範圍影像（實驗性）</string>
 	<string name="summary_full_range">若您的裝置無法正確顯示全範圍影像內容，將導致明暗區域細節流失。</string>
-	<string name="title_prevent_packet_loss">防止封包遺失</string>
-	<string name="summary_prevent_packet_loss">若裝置因不明原因出現封包遺失，可嘗試啟用此選項。</string>
 	<string name="title_enable_perf_overlay">串流時顯示效能資訊</string>
 	<string name="summary_enable_perf_overlay">串流時顯示即時效能資訊</string>
 	<string name="title_enable_post_stream_toast">串流後顯示延遲訊息</string>
@@ -585,12 +573,6 @@
 	<string name="title_checkbox_ignore_synth_events">忽略合成事件</string>
 	<string name="summary_ignore_synth_events">忽略 Android 系統發送的合成事件。可解決部分裝置上滑鼠點擊觸發其他意外按鍵的問題。\n啟用後，系統軟體鍵盤將無法使用。</string>
 
-	<string name="title_smart_clipboard_sync">智慧剪貼簿同步（實驗性）</string>
-	<string name="summary_smart_clipboard_sync">串流開始/恢復時自動上傳剪貼簿內容至伺服器；失去焦點時自伺服器下載（需搭配 Apollo）。</string>
-	<string name="title_smart_clipboard_sync_toast">剪貼簿同步提示</string>
-	<string name="summary_smart_clipboard_sync_toast">顯示剪貼簿同步結果的提示訊息</string>
-	<string name="title_hide_clipboard_content">隱藏剪貼簿內容</string>
-	<string name="summary_hide_clipboard_content">將遠端剪貼簿標記為敏感資訊</string>
 
 	<string name="title_settings_misc">雜項</string>
 	<string name="perf_overlay_lite_bandwidth">頻寬</string>
@@ -610,8 +592,6 @@
 	<string name="title_checkbox_forceTightThresholds">緊密 VSync（實驗性）</string>
 	<string name="summary_checkbox_forceTightThresholds">更緊的 VSync 門檻以降低延遲；可能增加掉幀。</string>
 
-	<string name="title_checkbox_use_virtual_display">使用虛擬顯示器</string>
-	<string name="summary_checkbox_use_virtual_display">預設使用虛擬顯示器。\n虛擬顯示器可自動匹配用戶端解析度與幀率設定，帶來無縫的串流體驗。\n需要 Apollo 作為主機串流軟體。</string>
 
 	<string name="title_checkbox_resume_without_confirm">快速繼續</string>
 	<string name="summary_checkbox_resume_without_confirm">按下繼續按鈕時不顯示選單，直接繼續應用程式。</string>
@@ -681,16 +661,7 @@
 	<string name="game_dialog_title_quit_confirm">確定要離開？</string>
 	<string name="game_dialog_message_quit_confirm">請確認沒有未儲存的進度。離開工作階段將終止您目前執行的應用程式。</string>
 	<string name="game_menu_quit_session">結束工作階段</string>
-	<string name="game_menu_server_cmd">伺服器指令</string>
-	<string name="game_menu_fetch_clipboard">取得剪貼簿</string>
-	<string name="game_menu_upload_clipboard">上傳剪貼簿</string>
-	<string name="game_dialog_title_server_cmd_empty">無伺服器指令</string>
-	<string name="game_dialog_message_server_cmd_empty">請確認您使用的是 Apollo 作為伺服器軟體，且已授予此客戶端「伺服器指令」權限。</string>
 
-	<string name="vdisplay_not_ready">伺服器上的虛擬顯示器驅動尚未就緒。請確認已安裝並啟用 SudoVDA 驅動程式。</string>
-	<string name="vdisplay_not_supported"><![CDATA[此伺服器不支援虛擬顯示器。請使用 <a href="https://github.com/ClassicOldSong/Apollo">Apollo</a> 作為主機串流軟體。]]></string>
-	<string name="clipboard_sync_unsupported">此伺服器不支援剪貼簿同步。請安裝或將伺服器升級至最新版本的 Apollo。</string>
-	<string name="send_clipboard_failed">傳送剪貼簿失敗： </string>
 
 	<string name="external_display_info">外接顯示器連接：%1$dx%2$d，%3$.1fHz</string>
 	<string name="notification_channel_name">外接顯示控制</string>
@@ -699,9 +670,6 @@
 	<string name="permission_denied">通知權限被拒</string>
 	<string name="no_external_display">未偵測到外接顯示器</string>
 	<string name="no_game_instance">沒有可用的遊戲實例</string>
-	<string name="get_clipboard_failed">取得剪貼簿失敗： </string>
-	<string name="send_clipboard_success">剪貼簿傳送成功</string>
-	<string name="get_clipboard_success">剪貼簿取得成功</string>
 
 	<string name="proceed">繼續</string>
 	<string name="cancel">取消</string>
@@ -710,7 +678,6 @@
 	<string name="error_msg_timeout">連線逾時</string>
 
 	<string name="permission_launch_app">啟動應用程式</string>
-	<string name="permission_sync_clipboard">同步剪貼簿</string>
 	
 	<string name="searchpreference_search">搜尋…</string>
 	<string name="searchpreference_clear">清除</string>

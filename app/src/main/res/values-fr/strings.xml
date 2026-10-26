@@ -22,7 +22,6 @@
     <string name="pcview_menu_header_unknown">Actualisation</string>
     <string name="pcview_menu_app_list">Afficher toutes les applis</string>
     <string name="pcview_menu_pair_pc">Appairer avec ce PC</string>
-    <string name="pcview_menu_pair_pc_otp">Appairage OTP</string>
     <string name="pcview_menu_unpair_pc">Désappairer</string>
     <string name="pcview_menu_send_wol">Envoyer une requête Wake-On-LAN</string>
     <string name="pcview_menu_delete_pc">Supprimer le PC</string>
@@ -50,14 +49,10 @@
     <string name="pair_pairing_title">Appariement</string>
     <string name="pair_pairing_msg">Veuillez entrer le code PIN suivant sur le PC cible :</string>
     <string name="pair_pairing_help">Si votre PC hôte utilise Sunshine, accédez à l\'interface web de Sunshine pour saisir le code PIN.</string>
-    <string name="pair_otp_pairing_msg">Appariement, veuillez patienter…</string>
-    <string name="pair_otp_pairing_help">L\'appariement OTP n\'est disponible qu\'avec Apollo, entrez manuellement le code PIN que vous venez de fournir sur l\'interface web si vous utilisez un autre logiciel hôte.</string>
     <string name="pair_incorrect_pin">Code PIN ou phrase secrète incorrect</string>
     <string name="pair_fail">Échec de l\'appariement</string>
     <string name="pair_already_in_progress">Appariement déjà en cours</string>
-    <string name="pair_passphrase_hint">Phrase secrète</string>
     <string name="pair_pin_length_msg">Le code PIN doit comporter 4 chiffres</string>
-    <string name="pair_passphrase_length_msg">La phrase secrète doit comporter au moins 4 caractères</string>
 
     <!-- WOL messages -->
     <string name="wol_pc_online">L\'ordinateur est en ligne</string>
@@ -126,12 +121,8 @@
     <!-- AppList activity -->
     <string name="applist_connect_msg">Connexion au PC…</string>
     <string name="applist_menu_resume">Reprendre la session</string>
-    <string name="applist_menu_start_vdisplay">Démarrer en affichage virtuel</string>
-    <string name="applist_menu_start_primarydisplay">Démarrer en affichage principal</string>
     <string name="applist_menu_quit">Quitter la session</string>
     <string name="applist_menu_quit_and_start">Quitter le jeu actuel et démarrer</string>
-    <string name="applist_menu_quit_and_start_vdisplay">Quitter le jeu actuel et démarrer en affichage virtuel</string>
-    <string name="applist_menu_quit_and_start_primarydisplay">Quitter le jeu actuel et démarrer en affichage principal</string>
     <string name="applist_menu_cancel">Annuler</string>
     <string name="applist_menu_details">Voir les détails</string>
     <string name="applist_menu_scut">Créer un raccourci</string>
@@ -157,7 +148,6 @@
     <string name="addpc_wrong_sitelocal">Cette adresse ne semble pas correcte. Vous devez utiliser l\'adresse IP publique de votre routeur pour le streaming depuis Internet.</string>
 
     <!-- Preferences -->
-    <string name="category_general_settings">Paramètres généraux</string>
     <string name="category_video_settings">Paramètres vidéo</string>
     <string name="title_resolution_list">Résolution vidéo</string>
     <string name="summary_resolution_list">Augmentez pour une meilleure clarté de l\'image. Réduisez pour de meilleures performances sur les appareils bas de gamme et les réseaux lents.</string>
@@ -477,12 +467,6 @@
     <string name="summary_back_as_guide">Envoyer l\'appui sur le bouton Guide(PS/HOME) lorsque le bouton Retour est enfoncé sur les manettes.</string>
     <string name="title_checkbox_ignore_synth_events">Ignorer les événements synthétiques</string>
     <string name="summary_ignore_synth_events">Ignore les événements synthétiques envoyés par le système Android. Cela peut résoudre les problèmes où les clics de souris déclenchent d\'autres touches inattendues sur certains appareils.\nL\'activation de cette option empêchera le clavier logiciel du système de fonctionner.</string>
-    <string name="title_smart_clipboard_sync">Synchronisation intelligente du presse-papiers (expérimental)</string>
-    <string name="summary_smart_clipboard_sync">Télécharger automatiquement le contenu du presse-papiers vers le serveur au démarrage/reprise du flux, télécharger le presse-papiers depuis le serveur lors de la perte de focus (nécessite Apollo).</string>
-    <string name="title_smart_clipboard_sync_toast">Toast de synchronisation du presse-papiers</string>
-    <string name="summary_smart_clipboard_sync_toast">Afficher un toast pour le résultat de la synchronisation du presse-papiers</string>
-    <string name="title_hide_clipboard_content">Masquer le contenu du presse-papiers</string>
-    <string name="summary_hide_clipboard_content">Marquer le contenu du presse-papiers distant comme informations sensibles</string>
     <string name="title_settings_misc">Divers</string>
     <string name="perf_overlay_lite_bandwidth">Bande passante</string>
     <string name="perf_overlay_lite_network_decoding_delay">Délai de décodage/réseau</string>
@@ -495,8 +479,6 @@
     <string name="summary_checkbox_enforce_display_mode">Forcer la surface à utiliser le mode d\'affichage optimal.\nRequis par certains systèmes (comme ColorOS) pour définir correctement la résolution/le taux de rafraîchissement.</string>
     <string name="title_checkbox_ultra_low_latency">Latence ultra faible (expérimental)</string>
     <string name="summary_checkbox_ultra_low_latency">Efficace uniquement pour SD8Gen2/8(s)Gen3/8Elite.</string>
-    <string name="title_checkbox_use_virtual_display">Utiliser l\'affichage virtuel</string>
-    <string name="summary_checkbox_use_virtual_display">Utiliser l\'affichage virtuel par défaut.\nL\'affichage virtuel peut correspondre automatiquement à la résolution et au taux de rafraîchissement de votre appareil, offrant une expérience de streaming fluide.\nNécessite Apollo comme logiciel de streaming hôte.</string>
     <string name="title_checkbox_resume_without_confirm">Reprise rapide</string>
     <string name="summary_checkbox_resume_without_confirm">Ne pas afficher le menu de reprise lors du clic sur le bouton de reprise, reprendre l\'application immédiatement.</string>
     <string name="title_checkbox_enable_sticky_modifier_key_virtual_keyboard">Touches modificatrices adhésives</string>
@@ -554,18 +536,6 @@
     <string name="game_dialog_title_quit_confirm">Voulez-vous vraiment quitter ?</string>
     <string name="game_dialog_message_quit_confirm">Veuillez vous assurer que vous n\'avez aucune progression non enregistrée. La quittance de la session mettra fin à l\'application en cours d\'exécution.</string>
     <string name="game_menu_quit_session">Quitter la session</string>
-    <string name="game_menu_server_cmd">Commandes du serveur</string>
-    <string name="game_menu_fetch_clipboard">Récupérer le presse-papiers</string>
-    <string name="game_menu_upload_clipboard">Télécharger le presse-papiers</string>
-    <string name="game_dialog_title_server_cmd_empty">Aucune commande de serveur</string>
-    <string name="game_dialog_message_server_cmd_empty">Veuillez vous assurer que vous utilisez Apollo comme logiciel serveur et que vous avez accordé à ce client l\'autorisation "Commande de serveur".</string>
-    <string name="vdisplay_not_ready">Le pilote d\'affichage virtuel n\'est pas prêt sur le serveur. Veuillez vous assurer que le pilote SudoVDA est installé et activé.</string>
-    <string name="vdisplay_not_supported"><![CDATA[L\'affichage virtuel n\'est pas pris en charge sur ce serveur. Veuillez utiliser <a href=\"https://github.com/ClassicOldSong/Apollo\">Apollo</a> comme logiciel de streaming hôte.]]></string>
-    <string name="clipboard_sync_unsupported">Ce serveur ne prend pas en charge la synchronisation du presse-papiers. Veuillez installer ou mettre à jour votre serveur vers la dernière version d\'Apollo.</string>
-    <string name="send_clipboard_failed">Échec de l\'envoi du presse-papiers : </string>
-    <string name="get_clipboard_failed">Échec de la récupération du presse-papiers : </string>
-    <string name="send_clipboard_success">Presse-papiers envoyé avec succès</string>
-    <string name="get_clipboard_success">Presse-papiers récupéré avec succès</string>
     <string name="proceed">Continuer</string>
     <string name="cancel">Annuler</string>
     <string name="configuration_mode_disable_enable_buttons">Mode de configuration (Désactiver/Activer les boutons)</string>
@@ -576,7 +546,6 @@
     <string name="error_msg_permission_denied">Autorisation refusée</string>
     <string name="error_msg_timeout">Délai de connexion dépassé</string>
     <string name="permission_launch_app">Lancer les applications</string>
-    <string name="permission_sync_clipboard">Synchroniser le presse-papiers</string>
     <string name="searchpreference_search">Rechercher…</string>
     <string name="searchpreference_clear">Effacer</string>
     <string name="searchpreference_history_entry">Entrée de l\'historique</string>
