@@ -47,6 +47,9 @@ import io.github.staernid.sunbeam.profiles.ProfilesManager;
 import io.github.staernid.sunbeam.ui.ExternalControllerView;
 import io.github.staernid.sunbeam.ui.GameGestures;
 import io.github.staernid.sunbeam.ui.StreamContainer;
+import io.github.staernid.sunbeam.stream.overlay.StreamMenuCoordinator;
+import io.github.staernid.sunbeam.stream.overlay.StreamOverlayManager;
+import io.github.staernid.sunbeam.stream.overlay.StreamToastHelper;
 import io.github.staernid.sunbeam.utils.Dialog;
 import io.github.staernid.sunbeam.utils.ExternalDisplayControlActivity;
 import io.github.staernid.sunbeam.utils.MouseModeOption;
@@ -187,16 +190,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private StreamContainer streamContainer;
 
     private boolean quitOnStop = false;
-    private boolean isHidingOverlays;
-    private boolean floatingButtonShown;
-    private boolean overlayToggleZoomButtonShown;
-    private TextView notificationOverlayView;
-    private int requestedNotificationOverlayVisibility = View.GONE;
-    private View performanceOverlayView;
-
-    private TextView performanceOverlayLite;
-
-    private TextView performanceOverlayBig;
+    private StreamOverlayManager overlayManager;
+    private StreamMenuCoordinator menuCoordinator;
 
     private MediaCodecDecoderRenderer decoderRenderer;
     private boolean reportedCrash;
@@ -257,17 +252,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public boolean isInputOnly = true;
     public boolean allowChangeMouseMode = true;
     private boolean onExternelDisplay = false;
-    private ImageButton floatingMenuButton;
-    private ImageButton overlayToggleButton;
-    private float floatingButtonDX, floatingButtonDY;
-    private boolean isButtonMoving = false;
-    private static final float CLICK_ACTION_THRESHOLD = 5;
-    private float floatingButtonStartX, floatingButtonStartY;
-
-    // Zoom button drag state
-    private float zoomButtonDX, zoomButtonDY;
-    private boolean isZoomButtonMoving = false;
-    private float zoomButtonStartX, zoomButtonStartY;
 
     // Queue for batching commitText payloads
     private static final int UTF8_CHUNK_SIZE = 512;
@@ -466,14 +450,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             );
         }
 
-        notificationOverlayView = findViewById(R.id.notificationOverlay);
-
-        performanceOverlayView = findViewById(R.id.performanceOverlay);
-
-        performanceOverlayLite = findViewById(R.id.performanceOverlayLite);
-
-        performanceOverlayBig = findViewById(R.id.performanceOverlayBig);
-
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -576,25 +552,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 else {
                     Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show();
                 }
-            }
-        }
-
-        // Check if the user has enabled performance stats overlay
-        if (prefConfig.enablePerfOverlay) {
-            performanceOverlayView.setVisibility(View.VISIBLE);
-            if (prefConfig.enablePerfOverlayLite) {
-                performanceOverlayLite.setVisibility(View.VISIBLE);
-                if(prefConfig.enablePerfOverlayLiteDialog){
-                    performanceOverlayLite.setOnClickListener(v -> showGameMenu(null));
-                }
-            } else {
-                performanceOverlayBig.setVisibility(View.VISIBLE);
-            }
-            if (prefConfig.enablePerfOverlayBottom) {
-                //performanceOverlayView.getLayoutParams().layout_gravity = Gravity.BOTTOM;
-                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) performanceOverlayView.getLayoutParams();
-                params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                performanceOverlayView.setLayoutParams(params);
             }
         }
 
@@ -869,13 +826,23 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         });
 
         gameMenuCallbacks = new GameMenu(this);
+        menuCoordinator = new StreamMenuCoordinator(
+                this::isOnExternalDisplay,
+                () -> gameMenuCallbacks
+        );
 
-        floatingMenuButton = findViewById(R.id.floatingMenuButton);
-        updateFloatingButtonVisibility(prefConfig.enableBackMenu && prefConfig.enableFloatingButton);
-        initFloatingButton();
-
-        overlayToggleButton = findViewById(R.id.overlayToggleZoomButton);
-        setupOverlayToggleButton();
+        overlayManager = new StreamOverlayManager(
+                prefConfig,
+                isWidth -> isWidth ? getWindow().getDecorView().getWidth() : getWindow().getDecorView().getHeight(),
+                findViewById(R.id.performanceOverlay),
+                (TextView) findViewById(R.id.performanceOverlayLite),
+                (TextView) findViewById(R.id.performanceOverlayBig),
+                (TextView) findViewById(R.id.notificationOverlay),
+                (ImageButton) findViewById(R.id.floatingMenuButton),
+                (ImageButton) findViewById(R.id.overlayToggleZoomButton),
+                () -> showGameMenu(null),
+                this::toggleZoomMode
+        );
 
         //fixed size + pacing without back-pressure on MTK
         try {
@@ -924,77 +891,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         } catch (Throwable ignored) {}
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private void setupOverlayToggleButton() {
-        if (overlayToggleButton != null) {
-            if (prefConfig.showOverlayZoomToggleButton) {
-                overlayToggleButton.setVisibility(View.VISIBLE);
-
-                // Set initial appearance based on current state
-                updateZoomButtonAppearance();
-
-                // Touch listener for drag and click
-                overlayToggleButton.setOnTouchListener((view, event) -> {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            zoomButtonStartX = event.getRawX();
-                            zoomButtonStartY = event.getRawY();
-                            zoomButtonDX = view.getX() - event.getRawX();
-                            zoomButtonDY = view.getY() - event.getRawY();
-                            isZoomButtonMoving = false;
-                            return true;
-                        case MotionEvent.ACTION_MOVE:
-                            float newX = event.getRawX() + zoomButtonDX;
-                            float newY = event.getRawY() + zoomButtonDY;
-
-                            // Check if it's a move or just a tap
-                            if (Math.abs(event.getRawX() - zoomButtonStartX) > CLICK_ACTION_THRESHOLD ||
-                                    Math.abs(event.getRawY() - zoomButtonStartY) > CLICK_ACTION_THRESHOLD) {
-                                isZoomButtonMoving = true;
-                            }
-
-                            // Ensure the button stays within screen bounds
-                            if (newX < 0) newX = 0;
-                            if (newY < 0) newY = 0;
-
-                            int maxOffsetX = getWindow().getDecorView().getWidth() - view.getWidth();
-                            if (newX > maxOffsetX) {
-                                newX = maxOffsetX;
-                            }
-
-                            int maxOffsetY = getWindow().getDecorView().getHeight() - view.getHeight();
-                            if (newY > maxOffsetY) {
-                                newY = maxOffsetY;
-                            }
-
-                            view.setX(newX);
-                            view.setY(newY);
-                            return true;
-                        case MotionEvent.ACTION_UP:
-                            if (!isZoomButtonMoving) {
-                                // It's a click event, toggle zoom mode
-                                toggleZoomMode();
-                                updateZoomButtonAppearance();
-                            }
-                            isZoomButtonMoving = false;
-                            return true;
-                        default:
-                            return false;
-                    }
-                });
-            } else {
-                overlayToggleButton.setVisibility(View.GONE);
-            }
-        }
-    }
-
     private void updateZoomButtonAppearance() {
-        if (overlayToggleButton != null) {
-            // Change background based on pan/zoom mode state
-            overlayToggleButton.setBackgroundResource(isPanZoomMode ?
-                    R.drawable.floating_menu_button_active : R.drawable.floating_menu_button);
-            // No need for alpha changes since the color indicates the state
-            overlayToggleButton.setAlpha(1.0f);
+        if (overlayManager != null) {
+            overlayManager.updateZoomButtonAppearance(isPanZoomMode);
         }
     }
 
@@ -1022,60 +921,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private void handleDisplayRemoved() {
         NotificationManagerCompat.from(getBaseContext()).cancel(SECONDARY_SCREEN_NOTIFICATION_ID);
         closeExternalDisplayControl();
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private void initFloatingButton() {
-        // Touch listener for drag and click
-        if (floatingMenuButton != null) {
-            floatingMenuButton.setOnTouchListener((view, event) -> {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        floatingButtonStartX = event.getRawX();
-                        floatingButtonStartY = event.getRawY();
-                        floatingButtonDX = view.getX() - event.getRawX();
-                        floatingButtonDY = view.getY() - event.getRawY();
-                        isButtonMoving = false;
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        float newX = event.getRawX() + floatingButtonDX;
-                        float newY = event.getRawY() + floatingButtonDY;
-
-                        // Check if it's a move or just a tap
-                        if (Math.abs(event.getRawX() - floatingButtonStartX) > CLICK_ACTION_THRESHOLD ||
-                                Math.abs(event.getRawY() - floatingButtonStartY) > CLICK_ACTION_THRESHOLD) {
-                            isButtonMoving = true;
-                        }
-
-                        // Ensure the button stays within screen bounds
-                        if (newX < 0) newX = 0;
-                        if (newY < 0) newY = 0;
-
-                        int maxOffsetX = getWindow().getDecorView().getWidth() - view.getWidth();
-                        if (newX > maxOffsetX) {
-                            newX = maxOffsetX;
-                        }
-
-                        int maxOffsetY = getWindow().getDecorView().getHeight() - view.getHeight();
-                        if (newY > maxOffsetY) {
-                            newY = maxOffsetY;
-                        }
-
-                        view.setX(newX);
-                        view.setY(newY);
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                        if (!isButtonMoving) {
-                            // It's a click event, show menu
-                            showGameMenu(null);
-                        }
-                        isButtonMoving = false;
-                        return true;
-                    default:
-                        return false;
-                }
-            });
-        }
     }
 
     private void initKeyboardController(){
@@ -1197,18 +1042,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Hide on-screen overlays in PiP mode
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (isInPictureInPictureMode()) {
-                isHidingOverlays = true;
-
-                floatingButtonShown = floatingMenuButton.isShown();
-
-                if (floatingButtonShown) {
-                    floatingMenuButton.setVisibility(View.GONE);
-                }
-
-                overlayToggleZoomButtonShown = overlayToggleButton != null && overlayToggleButton.isShown();
-
-                if (overlayToggleZoomButtonShown) {
-                    overlayToggleButton.setVisibility(View.GONE);
+                if (overlayManager != null) {
+                    overlayManager.onEnterPiP();
                 }
 
                 if (virtualController != null) {
@@ -1219,14 +1054,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     keyBoardController.hide(true);
                 }
 
-                if (keyBoardLayoutController!=null && keyBoardLayoutController.shown) {
+                if (keyBoardLayoutController != null && keyBoardLayoutController.shown) {
                     keyBoardLayoutController.hide(true);
                 }
 
                 hideGameMenu();
-
-                performanceOverlayView.setVisibility(View.GONE);
-                notificationOverlayView.setVisibility(View.GONE);
 
                 // Disable sensors while in PiP mode
                 controllerHandler.disableSensors();
@@ -1235,14 +1067,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 UiHelper.notifyStreamEnteringPiP(this);
             }
             else {
-                isHidingOverlays = false;
-
-                if (floatingButtonShown) {
-                    floatingMenuButton.setVisibility(View.VISIBLE);
-                }
-
-                if (overlayToggleZoomButtonShown) {
-                    overlayToggleButton.setVisibility(View.VISIBLE);
+                if (overlayManager != null) {
+                    overlayManager.onExitPiP();
                 }
 
                 // Restore overlays to previous state when leaving PiP
@@ -1255,15 +1081,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     keyBoardController.show();
                 }
 
-                if(keyBoardLayoutController!=null && keyBoardLayoutController.shown){
+                if (keyBoardLayoutController != null && keyBoardLayoutController.shown) {
                     keyBoardLayoutController.show();
                 }
-
-                if (prefConfig.enablePerfOverlay) {
-                    performanceOverlayView.setVisibility(View.VISIBLE);
-                }
-
-                notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
 
                 // Enable sensors again after exiting PiP
                 controllerHandler.enableSensors();
@@ -2094,20 +1914,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     @Override
     public void onConnectionStatusUpdate(int connectionStatus) {
-        if (connectionStatus == MoonBridge.CONN_STATUS_POOR) {
-            if (prefConfig.bitrate > 5000) {
-                notificationOverlayView.setText(getResources().getString(R.string.slow_connection_msg));
-            } else {
-                notificationOverlayView.setText(getResources().getString(R.string.poor_connection_msg));
-            }
-
-            requestedNotificationOverlayVisibility = View.VISIBLE;
-        } else if (connectionStatus == MoonBridge.CONN_STATUS_OKAY) {
-            requestedNotificationOverlayVisibility = View.GONE;
-        }
-
-        if (!isHidingOverlays) {
-            notificationOverlayView.setVisibility(requestedNotificationOverlayVisibility);
+        if (overlayManager != null) {
+            overlayManager.onConnectionStatusUpdate(connectionStatus);
         }
     }
 
@@ -2135,7 +1943,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         UiHelper.notifyStreamConnected(Game.this);
 
         // Ensure overlay toggle button visibility is properly set
-        setupOverlayToggleButton();
+        if (overlayManager != null) {
+            overlayManager.refreshOverlayZoomButtonVisibility();
+        }
 
         hideSystemUi(1000);
 
@@ -2316,16 +2126,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     @Override
     public void onPerfUpdate(final String text) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(prefConfig.enablePerfOverlayLite){
-                    performanceOverlayLite.setText(text);
-                }else{
-                    performanceOverlayBig.setText(text);
-                }
-            }
-        });
+        if (overlayManager != null) {
+            overlayManager.onPerfUpdate(text);
+        }
     }
 
     @Override
@@ -2370,11 +2173,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
     public void toggleZoomMode() {
         this.isPanZoomMode = !this.isPanZoomMode;
-        if (this.isPanZoomMode) {
-            Toast.makeText(this, getString(R.string.pan_zoom_mode_enabled), Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, getString(R.string.pan_zoom_mode_disabled), Toast.LENGTH_SHORT).show();
-        }
+        StreamToastHelper.showPanZoomToast(this, this.isPanZoomMode);
         updateZoomButtonAppearance();
 
         if (ExternalDisplayControlActivity.instance != null) {
@@ -2467,52 +2266,15 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
      *
      * @param context The context to use to decide where to show the dialog.
      */
-    public void selectMouseMode(Context context){
-        String[] allModes = getResources().getStringArray(R.array.mouse_mode_names);
-
-        Set<String> allowedLabels = new HashSet<>(Arrays.asList(
-                getString(R.string.mouse_mode_track_pad_natural),
-                getString(R.string.mouse_mode_track_pad_gaming),
-                getString(R.string.mouse_mode_disabled)
-        ));
-
-        List<MouseModeOption> options = new ArrayList<>();
-
-        for (int i = 0; i < allModes.length; i++) {
-            String label = allModes[i];
-            boolean isAllowed = !isOnExternalDisplay() || allowedLabels.contains(label);
-            if (isAllowed) {
-                options.add(new MouseModeOption(i, label));
-            }
+    public void selectMouseMode(Context context) {
+        if (menuCoordinator != null) {
+            menuCoordinator.showSelectMouseModeDialog(
+                    context,
+                    prefConfig,
+                    this::applyMouseMode,
+                    this::toggleMouseLocalCursor
+            );
         }
-
-        options.add(new MouseModeOption(-1, getString(R.string.toggle_local_mouse_cursor)));
-
-        String[] labels = new String[options.size()];
-        for (int i = 0; i < options.size(); i++) {
-            labels[i] = options.get(i).label;
-        }
-        final MouseModeOption[] optionArray = options.toArray(new MouseModeOption[0]);
-
-        new AlertDialog.Builder(context)
-                .setTitle(getString(R.string.game_menu_select_mouse_mode))
-                .setItems(labels, (dialog, which) -> {
-                    dialog.dismiss();
-                    MouseModeOption selected = optionArray[which];
-                    if (selected.index == -1) {
-                        toggleMouseLocalCursor();
-                    } else {
-                        applyMouseMode(selected.index);
-                        if (prefConfig.rememberMouseMode) {
-                            ProfilesManager.getInstance().getOverlayingSharedPreferences(this)
-                                    .edit()
-                                    .putString("mouse_mode_list", String.valueOf(selected.index))
-                                    .apply();
-                        }
-                    }
-                })
-                .create()
-                .show();
     }
 
     //本地鼠标光标切换
@@ -2540,16 +2302,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     public void toggleHUD() {
-        prefConfig.enablePerfOverlay = !prefConfig.enablePerfOverlay;
-        if (prefConfig.enablePerfOverlay) {
-            performanceOverlayView.setVisibility(View.VISIBLE);
-            if(prefConfig.enablePerfOverlayLite){
-                performanceOverlayLite.setVisibility(View.VISIBLE);
-            }else{
-                performanceOverlayBig.setVisibility(View.VISIBLE);
-            }
-        } else {
-            performanceOverlayView.setVisibility(View.GONE);
+        if (overlayManager != null) {
+            overlayManager.toggleHUD();
         }
     }
 
@@ -2563,52 +2317,30 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     public void quit() {
-        Context context;
-        if (isOnExternalDisplay() && ExternalDisplayControlActivity.instance != null) {
-            context = ExternalDisplayControlActivity.instance;
-        } else {
-            context = this;
+        if (menuCoordinator != null) {
+            menuCoordinator.showQuitConfirmDialog(this, () -> {
+                quitOnStop = true;
+                finish();
+            });
         }
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(R.string.game_dialog_title_quit_confirm);
-        builder.setMessage(R.string.game_dialog_message_quit_confirm);
-
-        builder.setPositiveButton(getString(R.string.yes), (dialog, which) -> {
-            quitOnStop = true;
-            dialog.dismiss();
-            finish();
-        });
-
-        builder.setNegativeButton(getString(R.string.no), (dialog, which) -> dialog.dismiss());
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
     }
 
     @Override
     public void showGameMenu(GameInputDevice device) {
-        if(isOnExternalDisplay()) {
-            ExternalDisplayControlActivity.toggleGameMenu();
-        } else {
-            if (gameMenuCallbacks != null) {
-                gameMenuCallbacks.showMenu(device);
-            }
+        if (menuCoordinator != null) {
+            menuCoordinator.showGameMenu(device);
         }
     }
 
     public void hideGameMenu() {
-        if (gameMenuCallbacks != null) {
-            gameMenuCallbacks.hideMenu();
+        if (menuCoordinator != null) {
+            menuCoordinator.hideGameMenu();
         }
     }
 
-    private void updateFloatingButtonVisibility(boolean show) {
-        floatingMenuButton.setVisibility(show ? View.VISIBLE : View.GONE);
-    }
-
     public void toggleFloatingButtonVisibility() {
-        if (floatingMenuButton != null) {
-            updateFloatingButtonVisibility(floatingMenuButton.getVisibility() == View.GONE);
+        if (overlayManager != null) {
+            overlayManager.toggleFloatingButtonVisibility();
         }
     }
 
