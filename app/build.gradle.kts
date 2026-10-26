@@ -53,12 +53,6 @@ android {
         }
     }
 
-    externalNativeBuild {
-        ndkBuild {
-            path = file("src/main/jni/Android.mk")
-        }
-    }
-
     splits {
         abi {
             isEnable = true
@@ -69,6 +63,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:native"))
+
     implementation(libs.bouncycastle.bcprov)
     implementation(libs.bouncycastle.bcpkix)
     implementation(libs.jcodec)

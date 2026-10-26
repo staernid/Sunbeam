@@ -33,12 +33,12 @@ wrapped and tested before it is touched.
 
 ## Phase 2: Make the core testable
 
-- Extract from `Game.java` (4.3k lines): input routing, stream lifecycle, overlay/menu, display handling
-- Extract from `ControllerHandler.java` (3.5k): device registry, rumble/LED/motion, driver glue
-- Define a small `core:stream` API: `StreamSession(config) -> state Flow + events`; UI never touches `NvConnection` directly
-- JNI behind one module `core:native`
-- Unit tests for the protocol side (`nvstream.http`, pairing, serverinfo parsing) and the keyboard/mouse translators
-- A fake host for end-to-end tests where possible
+- [ ] Extract from `Game.java` (4.3k lines): input routing, stream lifecycle, overlay/menu, display handling
+- [ ] Extract from `ControllerHandler.java` (3.5k): device registry, rumble/LED/motion, driver glue
+- [ ] Define a small `core:stream` API: `StreamSession(config) -> state Flow + events`; UI never touches `NvConnection` directly
+- [x] JNI behind one module `core:native`
+- [x] Unit tests for the protocol side (`nvstream.http`, pairing, serverinfo parsing) and the keyboard/mouse translators
+- [ ] A fake host for end-to-end tests where possible
 
 ## Phase 3: Data and settings
 
