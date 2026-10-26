@@ -20,13 +20,11 @@ import io.github.staernid.sunbeam.binding.input.capture.InputCaptureManager;
 import io.github.staernid.sunbeam.binding.input.capture.InputCaptureProvider;
 import io.github.staernid.sunbeam.binding.input.driver.UsbDriverService;
 import io.github.staernid.sunbeam.binding.input.evdev.EvdevListener;
-import io.github.staernid.sunbeam.binding.input.virtual_controller.VirtualController;
-import io.github.staernid.sunbeam.binding.input.virtual_controller.keyboard.KeyBoardController;
-import io.github.staernid.sunbeam.binding.input.virtual_controller.keyboard.KeyBoardLayoutController;
 import io.github.staernid.sunbeam.binding.video.CrashListener;
 import io.github.staernid.sunbeam.binding.video.MediaCodecDecoderRenderer;
 import io.github.staernid.sunbeam.binding.video.MediaCodecHelper;
 import io.github.staernid.sunbeam.binding.video.PerfOverlayListener;
+import io.github.staernid.sunbeam.stream.controls.VirtualControlsManager;
 import androidx.annotation.NonNull;
 import io.github.staernid.sunbeam.nvstream.NvConnection;
 import io.github.staernid.sunbeam.stream.DefaultStreamConnectivityDriver;
@@ -156,11 +154,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
-    private VirtualController virtualController;
-
-    private KeyBoardController keyBoardController;
-
-    private KeyBoardLayoutController keyBoardLayoutController;
+    private VirtualControlsManager controlsManager;
 
     private PreferenceConfiguration prefConfig;
     private SharedPreferences tombstonePrefs;
@@ -742,6 +736,16 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
 
+        controlsManager = new VirtualControlsManager(
+                this,
+                (FrameLayout) rootView,
+                prefConfig,
+                controllerHandler,
+                () -> conn,
+                this::isOnExternalDisplay,
+                ExternalDisplayControlActivity::toggleFullKeyboard
+        );
+
         pointerInputHandler = new PointerInputHandler(
                 conn,
                 prefConfig,
@@ -750,10 +754,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 this,
                 controllerHandler,
                 () -> grabbedInput,
-                () -> virtualController != null && (
-                        virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons ||
-                        virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons
-                ),
+                controlsManager::isVirtualControllerEditing,
                 () -> isPanZoomMode,
                 event -> {
                     if (panZoomHandler != null) {
@@ -779,21 +780,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             initMouseMode();
         }
 
-        if (prefConfig.onscreenController) {
-            // create virtual onscreen controller
-            if (prefConfig.hideOSCWhenHasGamepad) {
-                if (!controllerHandler.hasController()) {
-                    initVirtualController();
-                }
-            } else {
-                initVirtualController();
-            }
-        }
-
-        //特殊按键屏幕布局
-        if(prefConfig.enableKeyboard){
-            initKeyboardController();
-        }
+        controlsManager.setupInitialControls();
 
         if (!decoderRenderer.isAvcSupported()) {
             if (spinner != null) {
@@ -923,57 +910,28 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         closeExternalDisplayControl();
     }
 
-    private void initKeyboardController(){
-        keyBoardController = new KeyBoardController(conn,(FrameLayout)rootView, this);
-        keyBoardController.refreshLayout();
-        keyBoardController.show();
-    }
-
     public Boolean isKeyboardLayoutVisible() {
-        return keyBoardLayoutController != null && keyBoardLayoutController.shown;
+        return controlsManager != null && controlsManager.isKeyboardLayoutVisible();
     }
 
-    private void initVirtualController(){
-        virtualController = new VirtualController(controllerHandler, (FrameLayout)rootView, this);
-        virtualController.refreshLayout();
-        virtualController.show();
-    }
-
-    private void initkeyBoardLayoutController(){
-        keyBoardLayoutController = new KeyBoardLayoutController((FrameLayout)rootView, this, prefConfig);
-        keyBoardLayoutController.refreshLayout();
-        keyBoardLayoutController.show();
-    }
-
-    //显示隐藏虚拟特殊按键
-    public void toggleKeyboardController(){
-        if (keyBoardController==null) {
-            initKeyboardController();
-            return;
+    // 显示隐藏虚拟特殊按键
+    public void toggleKeyboardController() {
+        if (controlsManager != null) {
+            controlsManager.toggleKeyboardController();
         }
-        keyBoardController.toggleVisibility();
     }
 
     public void toggleFullKeyboard() {
-        if (isOnExternalDisplay()) {
-            ExternalDisplayControlActivity.toggleFullKeyboard();
-            return;
+        if (controlsManager != null) {
+            controlsManager.toggleFullKeyboard();
         }
-        if (keyBoardLayoutController == null) {
-            initkeyBoardLayoutController();
-            return;
-        }
-        keyBoardLayoutController.toggleVisibility();
     }
 
-    //显示隐藏虚拟手柄控制器
-    public void toggleVirtualController(){
-        if (virtualController==null) {
-            initVirtualController();
-            prefConfig.onscreenController=true;
-            return;
+    // 显示隐藏虚拟手柄控制器
+    public void toggleVirtualController() {
+        if (controlsManager != null) {
+            controlsManager.toggleVirtualController();
         }
-        prefConfig.onscreenController= virtualController.switchShowHide() != 0;
     }
 
     private void setPreferredOrientationForActivity() {
@@ -1026,17 +984,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Set requested orientation for possible new screen size
         setPreferredOrientationForActivity();
 
-        if (virtualController != null) {
-            // Refresh layout of OSC for possible new screen size
-            virtualController.refreshLayout();
-        }
-
-        if(keyBoardController != null){
-            keyBoardController.refreshLayout();
-        }
-
-        if(keyBoardLayoutController != null){
-            keyBoardLayoutController.refreshLayout();
+        if (controlsManager != null) {
+            controlsManager.onConfigurationChanged();
         }
 
         // Hide on-screen overlays in PiP mode
@@ -1046,16 +995,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     overlayManager.onEnterPiP();
                 }
 
-                if (virtualController != null) {
-                    virtualController.hide();
-                }
-
-                if (keyBoardController != null && keyBoardController.shown) {
-                    keyBoardController.hide(true);
-                }
-
-                if (keyBoardLayoutController != null && keyBoardLayoutController.shown) {
-                    keyBoardLayoutController.hide(true);
+                if (controlsManager != null) {
+                    controlsManager.onEnterPiP();
                 }
 
                 hideGameMenu();
@@ -1072,17 +1013,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 }
 
                 // Restore overlays to previous state when leaving PiP
-
-                if (virtualController != null) {
-                    virtualController.show();
-                }
-
-                if (keyBoardController != null && keyBoardController.shown) {
-                    keyBoardController.show();
-                }
-
-                if (keyBoardLayoutController != null && keyBoardLayoutController.shown) {
-                    keyBoardLayoutController.show();
+                if (controlsManager != null) {
+                    controlsManager.onExitPiP();
                 }
 
                 // Enable sensors again after exiting PiP
@@ -1569,6 +1501,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Destroy the capture provider
         inputCaptureProvider.destroy();
         streamContainer.onDestroy();
+
+        if (controlsManager != null) {
+            controlsManager.destroy();
+        }
     }
 
     @Override
@@ -1593,15 +1529,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         SpinnerDialog.closeDialogs(this);
         Dialog.closeDialogs();
 
-        if (virtualController != null) {
-            virtualController.hide();
-        }
-        if (keyBoardController != null) {
-            keyBoardController.hide();
-        }
-
-        if(keyBoardLayoutController!=null){
-            keyBoardLayoutController.hide();
+        if (controlsManager != null) {
+            controlsManager.onStop();
         }
 
         if (conn != null) {
