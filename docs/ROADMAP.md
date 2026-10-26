@@ -43,8 +43,8 @@ wrapped and tested before it is touched.
 ## Phase 3: Data and settings
 
 - [x] `core:preferences` module: typed settings domain models (`StreamSettings`, `Resolution`, enums), DataStore preferences repository (`DataStorePreferencesRepository`), and automated `SharedPreferencesMigration` from legacy preference keys
-- [ ] Hosts and profiles → Room (or DataStore), with import of the current storage
-- [ ] Use the feature flags Sunshine reports in `serverinfo` to drive the UI
+- [x] `core:data` module: typed domain models (`Host`, `HostAddress`, `Profile`, `SunshineServerCapabilities`), backward-compatible `SqliteHostRepository` (`computers4.db`) and `JsonProfileRepository` (`profiles.json`) with reactive `Flow` emissions, and `SunshineServerInfoParser` for server codec capabilities and Sunshine/GFE detection
+- [ ] Connect `core:data` and `core:preferences` to drive UI and streaming configuration (Phase 4 bridge)
 
 ## Phase 4: Compose UI, screen by screen
 
