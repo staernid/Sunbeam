@@ -24,11 +24,12 @@ wrapped and tested before it is touched.
 
 ## Phase 1: Build foundation
 
-- Version catalog (`libs.versions.toml`), Gradle Kotlin DSL, convention plugins
-- Toolchain: AGP 9.x, Kotlin 2.x, JDK 17+, NDK r29, `targetSdk` 36 (do this together with triage B13-B17)
-- Strip `minSdk 21` legacy; choose a new floor (Voice uses 28) after checking the device base
-- Flavors: collapse `root`/`nonRoot` and `game`; decide what's still needed
-- Lint, ktlint and Compose stability config
+- [x] Version catalog (`libs.versions.toml`), Gradle Kotlin DSL, Kotlin 2.x support
+- [ ] Toolchain: AGP 9.x, JDK 17+, NDK r29, `targetSdk` 36 (do this together with triage B13-B17)
+- [ ] Convention plugins in `plugins/`
+- [ ] Strip `minSdk 21` legacy; choose a new floor (Voice uses 28) after checking the device base
+- [ ] Flavors: collapse `root`/`nonRoot` and `game`; decide what's still needed
+- [ ] Lint, ktlint and Compose stability config
 
 ## Phase 2: Make the core testable
 
