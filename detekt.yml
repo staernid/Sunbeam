@@ -1,0 +1,15 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+naming:
+  PackageNaming:
+    active: true
+
+potential-bugs:
+  PrintStackTrace:
+    active: true
+
+style:
+  ForbiddenComment:
+    active: false

@@ -5,10 +5,10 @@ module, moving to a modular Kotlin + Compose app. Plan: [docs/ROADMAP.md](docs/R
 
 ## Commands
 
-- Build: `./gradlew :app:assembleNonRoot_gameDebug`
-- Unit tests (JVM/Robolectric): `./gradlew :app:testNonRoot_gameDebugUnitTest`. See [android_test_setup.md](android_test_setup.md).
+- Build: `./gradlew :app:assembleDebug`
+- Unit tests (JVM/Robolectric): `./gradlew :app:testDebugUnitTest`. See [android_test_setup.md](android_test_setup.md).
 - Native code lives in `app/src/main/jni/moonlight-core` (submodules). Run `git submodule update --init --recursive` first.
-- Lint: `./gradlew :app:lintNonRoot_gameDebug`
+- Lint & Code Health: `./gradlew :app:lintDebug :app:ktlintCheck :app:detekt`
 
 ## Git
 

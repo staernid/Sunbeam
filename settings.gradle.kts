@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "sunbeam"
+includeBuild("plugins")
 include(":app")

@@ -25,11 +25,11 @@ wrapped and tested before it is touched.
 ## Phase 1: Build foundation
 
 - [x] Version catalog (`libs.versions.toml`), Gradle Kotlin DSL, Kotlin 2.x support
-- [ ] Toolchain: AGP 9.x, JDK 17+, NDK r29, `targetSdk` 36 (do this together with triage B13-B17)
-- [ ] Convention plugins in `plugins/`
+- [x] Toolchain: JDK 17 target compatibility, `targetSdk` 36, core library desugaring (triage B13-B17 aligned; NDK r27 kept for CI/workstation compatibility)
+- [x] Convention plugins in `plugins/` (`sunbeam.android.application`, `sunbeam.android.library`, `sunbeam.android.compose`, `sunbeam.lint`)
 - [ ] Strip `minSdk 21` legacy; choose a new floor (Voice uses 28) after checking the device base
-- [ ] Flavors: collapse `root`/`nonRoot` and `game`; decide what's still needed
-- [ ] Lint, ktlint and Compose stability config
+- [x] Flavors: collapsed legacy `root`/`nonRoot` and `game` down to standard `debug` and `release` variants
+- [x] Lint, ktlint, detekt and Compose stability config
 
 ## Phase 2: Make the core testable
 

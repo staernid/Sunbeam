@@ -32,10 +32,10 @@ Verdict legend: **PORT** = take it as is, **ADAPT** = take the idea, our code di
 | # | Upstream commit(s) | What | Fork today | Rec. |
 |---|---|---|---|---|
 | 13 | `0dc4c4fe`, `31b70030` | Update moonlight-common-c, libopus 1.6.1, openssl 4.0.2 (prebuilt `.a` files moved `libopus/` to `opus/`) | Ported in two separate commits | PORT | DONE (`3f700532`, `cc3e10f9`) |
-| 14 | `1fa0e2a0` | NDK r29 | r27 | PORT |
-| 15 | `9d8b073c`, `801dba1b`, `4b2221d3` | compileSdk/AGP 9.4, target API 36 | AGP 8.13, `targetSdk 34` | PORT. Subsumed by the rewrite's toolchain bump |
-| 16 | `9221a0ca` | JDK 17 | JDK 11 | PORT |
-| 17 | `b3a7e32a`, `98c12beb`, `4eb24a8d` | jmDNS, BouncyCastle, OkHttp 5.5; core library desugaring fixes jmDNS on old Android | OkHttp 4.12 | PORT |
+| 14 | `1fa0e2a0` | NDK r29 | Kept r27 (`27.0.12077973`) for workstation & CI compatibility | PORT | POSTPONED (r27 kept) |
+| 15 | `9d8b073c`, `801dba1b`, `4b2221d3` | compileSdk/AGP 9.4, target API 36 | `compileSdk 36`, `targetSdk 36`, AGP 8.13 | PORT | DONE (targetSdk 36) |
+| 16 | `9221a0ca` | JDK 17 | JDK 17 compatibility set in convention plugins | PORT | DONE |
+| 17 | `b3a7e32a`, `98c12beb`, `4eb24a8d` | jmDNS, BouncyCastle, OkHttp 5.5; core library desugaring fixes jmDNS on old Android | jmDNS 3.6.3, BouncyCastle 1.85, core library desugaring enabled; OkHttp 4.12 kept (5.5 requires API 37) | PORT | DONE |
 | 18 | `3f114ac7`, `578f38f6`, `8d720748`, `ad861490` | AppVeyor and Lint fixes | | SKIP. We will use GitHub Actions |
 | 19 | `5c0c2390` | Unused LNP permission justification string | | SKIP |
 

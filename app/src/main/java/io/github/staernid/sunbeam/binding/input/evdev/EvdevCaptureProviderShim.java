@@ -8,7 +8,7 @@ import io.github.staernid.sunbeam.binding.input.capture.InputCaptureProvider;
 
 public class EvdevCaptureProviderShim {
     public static boolean isCaptureProviderSupported() {
-        return BuildConfig.ROOT_BUILD;
+        return false;
     }
 
     // We need to construct our capture provider using reflection because it isn't included in non-root builds
