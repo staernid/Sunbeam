@@ -37,4 +37,17 @@ interface StreamSession {
     )
 
     fun sendMouseScroll(scrollAmount: Short)
+
+    fun sendMouseMove(
+        deltaX: Short,
+        deltaY: Short,
+    ) {}
+
+    fun sendControllerMotionEvent(
+        controllerNumber: Byte,
+        motionType: Byte,
+        x: Float,
+        y: Float,
+        z: Float,
+    ) {}
 }

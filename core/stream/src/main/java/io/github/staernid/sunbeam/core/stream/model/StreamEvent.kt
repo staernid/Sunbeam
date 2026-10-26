@@ -34,5 +34,29 @@ sealed interface StreamEvent {
         val b: Byte,
     ) : StreamEvent
 
-    data class HdrModeChanged(val enabled: Boolean, val hdrMetadata: ByteArray?) : StreamEvent
+    data class MotionEventStateChanged(
+        val controllerNumber: Short,
+        val motionType: Byte,
+        val reportRateHz: Short,
+    ) : StreamEvent
+
+    data class HdrModeChanged(val enabled: Boolean, val hdrMetadata: ByteArray?) : StreamEvent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as HdrModeChanged
+
+            if (enabled != other.enabled) return false
+            if (!hdrMetadata.contentEquals(other.hdrMetadata)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = enabled.hashCode()
+            result = 31 * result + (hdrMetadata?.contentHashCode() ?: 0)
+            return result
+        }
+    }
 }
