@@ -82,8 +82,8 @@ class SettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Select Resolution").assertIsDisplayed()
-        composeTestRule.onNodeWithText("1920x1080").assertIsDisplayed()
-        composeTestRule.onNodeWithText("2560x1440").assertIsDisplayed()
+        composeTestRule.onNodeWithText("1920x1080").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("2560x1440").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
     }
 

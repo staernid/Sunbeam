@@ -11,13 +11,6 @@ import io.github.staernid.sunbeam.core.preferences.models.VideoScaleMode
 import io.github.staernid.sunbeam.features.settings.SettingsDialogState
 import io.github.staernid.sunbeam.features.settings.SettingsUiState
 
-private val RESOLUTION_OPTIONS = listOf(
-    Resolution.RES_720P,
-    Resolution.RES_1080P,
-    Resolution.RES_1440P,
-    Resolution.RES_4K,
-)
-
 private val FPS_OPTIONS = listOf(30, 60, 90, 120)
 
 @Composable
@@ -37,12 +30,9 @@ fun SettingsDialogsHost(
 
         is SettingsDialogState.ResolutionPicker -> {
             val currentRes = Resolution(uiState.settings.width, uiState.settings.height)
-            ListSelectionDialog(
-                title = "Select Resolution",
-                options = RESOLUTION_OPTIONS,
-                selectedOption = currentRes,
-                optionLabel = { "${it.width}x${it.height}" },
-                onOptionSelected = { onResolutionSelect(it.width, it.height) },
+            ResolutionPickerDialog(
+                currentResolution = currentRes,
+                onResolutionSelected = onResolutionSelect,
                 onDismiss = onDismissDialog,
             )
         }

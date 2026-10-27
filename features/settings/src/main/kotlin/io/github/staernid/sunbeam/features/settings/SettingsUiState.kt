@@ -1,5 +1,6 @@
 package io.github.staernid.sunbeam.features.settings
 
+import io.github.staernid.sunbeam.core.preferences.models.Resolution
 import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
 
 sealed interface SettingsDialogState {
@@ -27,7 +28,17 @@ data class SettingsUiState(
     val userMessage: String? = null,
 ) {
     val resolutionLabel: String
-        get() = "${settings.width}x${settings.height}"
+        get() {
+            val res = Resolution(settings.width, settings.height)
+            val name = res.standardDisplayName
+            return if (name != null) {
+                "$name (${res.width}x${res.height})"
+            } else if (res.aspectRatioLabel.isNotEmpty()) {
+                "${res.width}x${res.height} (${res.aspectRatioLabel})"
+            } else {
+                "${res.width}x${res.height}"
+            }
+        }
 
     val fpsLabel: String
         get() = "${settings.fps} FPS"
