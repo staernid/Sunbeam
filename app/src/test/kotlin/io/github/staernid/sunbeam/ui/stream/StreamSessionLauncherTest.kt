@@ -145,7 +145,7 @@ class StreamSessionLauncherTest {
         val config = result.getOrThrow()
 
         assertEquals("192.168.1.50", config.hostAddress)
-        assertEquals(47989, config.httpsPort)
+        assertEquals(47984, config.httpsPort)
         assertEquals(2560, config.width)
         assertEquals(1440, config.height)
         assertEquals(120, config.fps)
@@ -195,6 +195,7 @@ class StreamSessionLauncherTest {
 
         assertEquals("192.168.1.50", intent.getStringExtra(Game.EXTRA_HOST))
         assertEquals(47989, intent.getIntExtra(Game.EXTRA_PORT, 0))
+        assertEquals(47984, intent.getIntExtra(Game.EXTRA_HTTPS_PORT, 0))
         assertEquals("Steam Big Picture", intent.getStringExtra(Game.EXTRA_APP_NAME))
         assertEquals(101, intent.getIntExtra(Game.EXTRA_APP_ID, 0))
         assertTrue(intent.getBooleanExtra(Game.EXTRA_APP_HDR, false))

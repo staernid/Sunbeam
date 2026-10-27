@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.staernid.sunbeam.core.data.model.HostApp
 import io.github.staernid.sunbeam.core.data.model.PairState
@@ -52,6 +53,7 @@ import io.github.staernid.sunbeam.ui.navigation.SunbeamNavigator
 import io.github.staernid.sunbeam.ui.navigation.SunbeamScreen
 import io.github.staernid.sunbeam.ui.navigation.TopLevelTab
 import io.github.staernid.sunbeam.ui.stream.StreamSessionLauncher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -84,6 +86,7 @@ fun SunbeamApp(
     // Fullscreen streaming screen bypasses navigation chrome
     if (currentScreen is SunbeamScreen.Stream) {
         val streamViewModel = remember { StreamViewModel() }
+        val context = LocalContext.current
 
         streamViewModel.onDisconnectAction = {
             coroutineScope.launch {
@@ -102,6 +105,13 @@ fun SunbeamApp(
             val configResult = streamLauncher.resolveStreamConfig(currentScreen.hostUuid, currentScreen.appId)
             configResult.onSuccess { config ->
                 streamSession?.start(config)
+            }
+            val host = hostRepository.getHostByUuid(currentScreen.hostUuid)
+            val apps = appRepository.getApps(currentScreen.hostUuid, showHidden = true).first()
+            val app = apps.find { it.id == currentScreen.appId }
+            if (host != null && app != null) {
+                streamLauncher.launchGameActivity(context, host, app)
+                navigator.popBack()
             }
         }
 
@@ -152,6 +162,7 @@ fun SunbeamApp(
                     appRepository = appRepository,
                     preferencesRepository = preferencesRepository,
                     profileRepository = profileRepository,
+                    streamLauncher = streamLauncher,
                     navigator = navigator,
                     hostOperationsHandler = hostOperationsHandler,
                 )
@@ -187,6 +198,7 @@ fun SunbeamApp(
                     appRepository = appRepository,
                     preferencesRepository = preferencesRepository,
                     profileRepository = profileRepository,
+                    streamLauncher = streamLauncher,
                     navigator = navigator,
                     hostOperationsHandler = hostOperationsHandler,
                 )
@@ -204,9 +216,12 @@ private fun ScreenContent(
     appRepository: AppRepository,
     preferencesRepository: PreferencesRepository,
     profileRepository: ProfileRepository,
+    streamLauncher: StreamSessionLauncher,
     navigator: SunbeamNavigator,
     hostOperationsHandler: HostOperationsHandler? = null,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     when (screen) {
         is SunbeamScreen.Hosts -> {
             val hostsViewModel = remember(hostRepository, hostOperationsHandler) {
@@ -242,15 +257,19 @@ private fun ScreenContent(
                 AppsViewModel(screen.hostUuid, hostRepository, appRepository)
             }
             val appsUiState by appsViewModel.uiState.collectAsStateWithLifecycle()
+            val context = LocalContext.current
 
-            val navigateToStream: (HostApp) -> Unit = { app ->
-                navigator.navigateTo(
-                    SunbeamScreen.Stream(
-                        hostUuid = screen.hostUuid,
-                        appId = app.id,
-                        appName = app.title,
-                    ),
-                )
+            val launchStream: (HostApp) -> Unit = { app ->
+                val host = appsUiState.host
+                if (host != null) {
+                    streamLauncher.launchGameActivity(context, host, app)
+                } else {
+                    coroutineScope.launch {
+                        hostRepository.getHostByUuid(screen.hostUuid)?.let { targetHost ->
+                            streamLauncher.launchGameActivity(context, targetHost, app)
+                        }
+                    }
+                }
             }
 
             AppsScreen(
@@ -259,11 +278,11 @@ private fun ScreenContent(
                 onBackClick = { navigator.popBack() },
                 onAppClick = { app ->
                     appsViewModel.onAppClick(app) { _, targetApp ->
-                        navigateToStream(targetApp)
+                        launchStream(targetApp)
                     }
                 },
                 onAppLongClick = appsViewModel::onAppLongClick,
-                onResumeClick = navigateToStream,
+                onResumeClick = launchStream,
                 onQuitClick = appsViewModel::onQuitRunningAppClick,
                 onRefresh = appsViewModel::onRefresh,
                 onSearchQueryChange = appsViewModel::onSearchQueryChange,
@@ -273,10 +292,10 @@ private fun ScreenContent(
                 onConfirmQuitApp = appsViewModel::onConfirmQuitApp,
                 onConfirmQuitAndLaunch = {
                     appsViewModel.onConfirmQuitAndLaunch { _, targetApp ->
-                        navigateToStream(targetApp)
+                        launchStream(targetApp)
                     }
                 },
-                onLaunchApp = navigateToStream,
+                onLaunchApp = launchStream,
                 onHideApp = appsViewModel::onHideApp,
                 onUnhideApp = appsViewModel::onUnhideApp,
                 onUserMessageDismissed = appsViewModel::onUserMessageDismissed,

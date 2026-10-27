@@ -2,6 +2,7 @@
 
 package io.github.staernid.sunbeam.ui
 
+import android.app.Application
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.ui.test.assertIsDisplayed
@@ -10,6 +11,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
+import io.github.staernid.sunbeam.Game
 import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostApp
@@ -28,11 +31,12 @@ import io.github.staernid.sunbeam.ui.stream.StreamSessionLauncher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import java.io.File
 import java.util.UUID
 
@@ -187,12 +191,40 @@ class SunbeamAppTest {
         composeTestRule.onNodeWithText("Desktop Rig").performClick()
         assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
 
-        // Click on the test app to navigate to StreamScreen
+        // Click on the test app to launch the streaming session
         composeTestRule.onNodeWithText("Cyberpunk 2077").performClick()
-        assertTrue(navigator.currentScreen is SunbeamScreen.Stream)
-        val stream = navigator.currentScreen as SunbeamScreen.Stream
-        assertEquals("host-1", stream.hostUuid)
-        assertEquals(200, stream.appId)
-        assertEquals("Cyberpunk 2077", stream.appName)
+        val startedIntent = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        assertNotNull(startedIntent)
+        assertEquals(Game::class.java.name, startedIntent.component?.className)
+        assertEquals(200, startedIntent.getIntExtra(Game.EXTRA_APP_ID, 0))
+        assertEquals("Cyberpunk 2077", startedIntent.getStringExtra(Game.EXTRA_APP_NAME))
+        assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
+    }
+
+    @Test
+    fun testDirectStreamScreenNavigationLaunchesActivity() {
+        val navigator = SunbeamNavigator(
+            initialScreen = SunbeamScreen.Stream("host-1", 200, "Cyberpunk 2077"),
+        )
+        val windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(400.dp, 800.dp))
+
+        composeTestRule.setContent {
+            SunbeamTheme {
+                SunbeamApp(
+                    windowSizeClass = windowSizeClass,
+                    hostRepository = fakeHostRepo,
+                    appRepository = fakeAppRepo,
+                    preferencesRepository = fakePrefsRepo,
+                    profileRepository = fakeProfileRepo,
+                    streamLauncher = streamLauncher,
+                    navigator = navigator,
+                )
+            }
+        }
+
+        val startedIntent = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
+        assertNotNull(startedIntent)
+        assertEquals(Game::class.java.name, startedIntent.component?.className)
+        assertEquals(200, startedIntent.getIntExtra(Game.EXTRA_APP_ID, 0))
     }
 }

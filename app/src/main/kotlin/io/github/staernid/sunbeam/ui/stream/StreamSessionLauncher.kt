@@ -25,6 +25,7 @@ import io.github.staernid.sunbeam.features.profiles.model.bitrateKbps
 import io.github.staernid.sunbeam.features.profiles.model.fps
 import io.github.staernid.sunbeam.features.profiles.model.height
 import io.github.staernid.sunbeam.features.profiles.model.width
+import io.github.staernid.sunbeam.nvstream.http.NvHTTP
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.ByteArrayInputStream
@@ -91,10 +92,12 @@ class StreamSessionLauncher(
                 }
             }
 
+        val httpsPort = if (host.httpsPort != 0) host.httpsPort else NvHTTP.DEFAULT_HTTPS_PORT
+
         val config =
             StreamConfig(
                 hostAddress = targetAddress.address,
-                httpsPort = targetAddress.port,
+                httpsPort = httpsPort,
                 width = width,
                 height = height,
                 fps = fps,
@@ -120,7 +123,8 @@ class StreamSessionLauncher(
             if (targetAddress != null) {
                 putExtra(Game.EXTRA_HOST, targetAddress.address)
                 putExtra(Game.EXTRA_PORT, targetAddress.port)
-                putExtra(Game.EXTRA_HTTPS_PORT, targetAddress.port)
+                val httpsPort = if (host.httpsPort != 0) host.httpsPort else NvHTTP.DEFAULT_HTTPS_PORT
+                putExtra(Game.EXTRA_HTTPS_PORT, httpsPort)
             }
             putExtra(Game.EXTRA_APP_NAME, app.title)
             putExtra(Game.EXTRA_APP_ID, app.id)
