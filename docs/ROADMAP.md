@@ -52,7 +52,7 @@ Order by risk. The stream screen goes last.
 
 1. [x] Theme and design system (`core:designsystem` module: Material 3, warm solar amber/cyan palettes, OLED pure black mode, dynamic color on API 31+, TV/foldable/tablet window size class adaptive layout info, and D-pad focus highlight helpers)
 2. [x] Host list and pairing (`features:hosts` module: Compose UI, responsive adaptive grid, status badges, PIN pairing dialog, manual host addition dialog, details dialog, and ViewModel)
-3. App grid
+3. [x] App grid (`features:apps` module: Compose UI, responsive poster grid, box art loading with fallback placeholders, active session running banner with quick resume and quit, search filter, hidden apps toggle, quit confirmation dialog, app details dialog, and ViewModel backed by `CachedAppRepository`)
 4. Settings (the biggest win, replaces a 1.1k-line `StreamSettings`)
 5. Profiles, on-screen controller editor, gamepad debug
 6. Stream screen: keep the `SurfaceView`, wrap it in `AndroidView`, move overlays/menu to Compose
