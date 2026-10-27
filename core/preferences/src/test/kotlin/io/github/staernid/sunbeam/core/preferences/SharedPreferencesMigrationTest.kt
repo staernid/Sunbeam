@@ -62,4 +62,33 @@ class SharedPreferencesMigrationTest {
             assertTrue(settings.onscreenController)
             assertEquals(15, settings.deadzonePercentage)
         }
+
+    @Test
+    fun updateSettings_syncsToSharedPreferences() =
+        testScope.runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val prefsName = "test_sync_prefs"
+            val sharedPrefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+
+            val repository =
+                DataStorePreferencesRepository.create(
+                    context = context,
+                    dataStoreName = "test_sync_datastore",
+                    legacySharedPrefsName = prefsName,
+                    scope = testScope,
+                )
+
+            repository.updateSettings { current ->
+                current.copy(
+                    width = 2560,
+                    height = 1440,
+                    fps = 120,
+                    bitrateKbps = 45000,
+                )
+            }
+
+            assertEquals("2560x1440", sharedPrefs.getString("list_resolution", null))
+            assertEquals("120", sharedPrefs.getString("list_fps", null))
+            assertEquals(45000, sharedPrefs.getInt("seekbar_bitrate_kbps", 0))
+        }
 }

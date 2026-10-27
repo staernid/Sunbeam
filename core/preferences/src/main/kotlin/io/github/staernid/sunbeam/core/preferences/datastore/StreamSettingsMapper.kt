@@ -1,5 +1,6 @@
 package io.github.staernid.sunbeam.core.preferences.datastore
 
+import android.content.SharedPreferences
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import io.github.staernid.sunbeam.core.preferences.models.AnalogStickScrolling
@@ -199,5 +200,82 @@ object StreamSettingsMapper {
         prefs[StreamPreferenceKeys.RESUME_WITHOUT_CONFIRM] = settings.resumeWithoutConfirm
         prefs[StreamPreferenceKeys.FULL_SCREEN] = settings.fullScreen
         prefs[StreamPreferenceKeys.ENABLE_PIP] = settings.enablePip
+    }
+
+    @Suppress("LongMethod")
+    fun toSharedPreferences(
+        settings: StreamSettings,
+        prefs: SharedPreferences,
+    ) {
+        val editor =
+            prefs.edit()
+                .putString(StreamPreferenceKeys.RESOLUTION.name, "${settings.width}x${settings.height}")
+                .putString(StreamPreferenceKeys.FPS.name, settings.fps.toString())
+                .putInt(StreamPreferenceKeys.BITRATE_KBPS.name, settings.bitrateKbps)
+                .putInt(StreamPreferenceKeys.METERED_BITRATE_KBPS.name, settings.meteredBitrateKbps)
+                .putString(StreamPreferenceKeys.VIDEO_SCALE_MODE.name, settings.videoScaleMode.prefValue)
+                .putString(StreamPreferenceKeys.VIDEO_FORMAT.name, settings.videoFormat.prefValue)
+                .putBoolean(StreamPreferenceKeys.ENABLE_HDR.name, settings.enableHdr)
+                .putBoolean(StreamPreferenceKeys.FULL_RANGE.name, settings.fullRange)
+                .putBoolean(StreamPreferenceKeys.ULTRA_LOW_LATENCY.name, settings.enableUltraLowLatency)
+                .putString(StreamPreferenceKeys.FRAME_PACING.name, settings.framePacing.prefValue)
+                .putBoolean(StreamPreferenceKeys.REDUCE_REFRESH_RATE.name, settings.reduceRefreshRate)
+                .putBoolean(StreamPreferenceKeys.ENFORCE_DISPLAY_MODE.name, settings.enforceDisplayMode)
+                .putBoolean(StreamPreferenceKeys.AUTO_INVERT_RESOLUTION.name, settings.autoInvertVideoResolution)
+                .putBoolean(StreamPreferenceKeys.VIDEO_SR.name, settings.videoSuperResolution)
+                .putBoolean(StreamPreferenceKeys.UNLOCK_FPS.name, settings.unlockFps)
+                .putString(StreamPreferenceKeys.AUDIO_CONFIG.name, settings.audioConfig.prefValue)
+                .putBoolean(StreamPreferenceKeys.HOST_AUDIO.name, settings.hostAudio)
+                .putBoolean(StreamPreferenceKeys.ENABLE_AUDIO_FX.name, settings.enableAudioFx)
+                .putBoolean(StreamPreferenceKeys.MULTI_CONTROLLER.name, settings.multiController)
+                .putBoolean(StreamPreferenceKeys.USB_DRIVER.name, settings.usbDriver)
+                .putBoolean(StreamPreferenceKeys.BIND_ALL_USB.name, settings.bindAllUsb)
+                .putBoolean(StreamPreferenceKeys.MOUSE_EMULATION.name, settings.mouseEmulation)
+                .putBoolean(StreamPreferenceKeys.REMEMBER_MOUSE_MODE.name, settings.rememberMouseMode)
+                .putBoolean(StreamPreferenceKeys.ABSOLUTE_MOUSE_MODE.name, settings.absoluteMouseMode)
+                .putBoolean(StreamPreferenceKeys.MOUSE_NAV_BUTTONS.name, settings.mouseNavButtons)
+                .putString(StreamPreferenceKeys.ANALOG_SCROLLING.name, settings.analogStickScrolling.prefValue)
+                .putBoolean(StreamPreferenceKeys.ONSCREEN_CONTROLLER.name, settings.onscreenController)
+                .putBoolean(StreamPreferenceKeys.HIDE_OSC_WHEN_HAS_GAMEPAD.name, settings.hideOscWhenHasGamepad)
+                .putBoolean(StreamPreferenceKeys.ONLY_SHOW_L3R3.name, settings.onlyShowL3R3)
+                .putBoolean(StreamPreferenceKeys.SHOW_GUIDE_BUTTON.name, settings.showGuideButton)
+                .putBoolean(StreamPreferenceKeys.VIBRATE_OSC.name, settings.vibrateOsc)
+                .putBoolean(StreamPreferenceKeys.VIBRATE_FALLBACK.name, settings.vibrateFallback)
+                .putInt(StreamPreferenceKeys.VIBRATE_FALLBACK_STRENGTH.name, settings.vibrateFallbackStrength)
+                .putBoolean(StreamPreferenceKeys.FLIP_FACE_BUTTONS.name, settings.flipFaceButtons)
+                .putBoolean(StreamPreferenceKeys.GAMEPAD_TOUCHPAD_AS_MOUSE.name, settings.gamepadTouchpadAsMouse)
+                .putBoolean(StreamPreferenceKeys.GAMEPAD_MOTION_SENSORS.name, settings.gamepadMotionSensors)
+                .putBoolean(StreamPreferenceKeys.GAMEPAD_MOTION_FALLBACK.name, settings.gamepadMotionFallback)
+                .putBoolean(
+                    StreamPreferenceKeys.FORCE_MOTION_SENSORS_FALLBACK.name,
+                    settings.forceMotionSensorsFallback,
+                )
+                .putBoolean(StreamPreferenceKeys.ENABLE_RUMBLE.name, settings.enableRumble)
+                .putBoolean(StreamPreferenceKeys.ENABLE_BATTERY_REPORT.name, settings.enableBatteryReport)
+                .putBoolean(StreamPreferenceKeys.FORCE_QWERTY.name, settings.forceQwerty)
+                .putBoolean(StreamPreferenceKeys.BACK_AS_META.name, settings.backAsMeta)
+                .putBoolean(StreamPreferenceKeys.RIGHT_ALT_AS_META.name, settings.rightAltAsMeta)
+                .putBoolean(StreamPreferenceKeys.IGNORE_SYNTH_EVENTS.name, settings.ignoreSynthEvents)
+                .putBoolean(StreamPreferenceKeys.BACK_AS_GUIDE.name, settings.backAsGuide)
+                .putInt(StreamPreferenceKeys.DEADZONE.name, settings.deadzonePercentage)
+                .putInt(StreamPreferenceKeys.OSC_OPACITY.name, settings.oscOpacity)
+                .putString(StreamPreferenceKeys.ONSCREEN_KEYBOARD_ALIGN_MODE.name, settings.onscreenKeyboardAlignMode)
+                .putBoolean(StreamPreferenceKeys.ENABLE_KEYBOARD.name, settings.enableKeyboard)
+                .putBoolean(StreamPreferenceKeys.ENABLE_KEYBOARD_VIBRATE.name, settings.enableKeyboardVibrate)
+                .putBoolean(StreamPreferenceKeys.ENABLE_COMMIT_TEXT.name, settings.enableCommitText)
+                .putBoolean(StreamPreferenceKeys.SMALL_ICON_MODE.name, settings.smallIconMode)
+                .putString(StreamPreferenceKeys.LANGUAGE.name, settings.language)
+                .putBoolean(StreamPreferenceKeys.DISABLE_WARNINGS.name, settings.disableWarnings)
+                .putBoolean(StreamPreferenceKeys.LATENCY_TOAST.name, settings.enableLatencyToast)
+                .putBoolean(StreamPreferenceKeys.ENABLE_PERF_OVERLAY.name, settings.enablePerfOverlay)
+                .putBoolean(StreamPreferenceKeys.ENABLE_PERF_LOGGING.name, settings.enablePerfLogging)
+                .putBoolean(StreamPreferenceKeys.RESUME_WITHOUT_CONFIRM.name, settings.resumeWithoutConfirm)
+                .putBoolean(StreamPreferenceKeys.FULL_SCREEN.name, settings.fullScreen)
+                .putBoolean(StreamPreferenceKeys.ENABLE_PIP.name, settings.enablePip)
+
+        settings.customResolution?.let { editor.putString(StreamPreferenceKeys.CUSTOM_RESOLUTION.name, it) }
+        settings.customRefreshRate?.let { editor.putString(StreamPreferenceKeys.CUSTOM_REFRESH_RATE.name, it) }
+        settings.customBitrateKbps?.let { editor.putString(StreamPreferenceKeys.CUSTOM_BITRATE.name, it.toString()) }
+        editor.apply()
     }
 }

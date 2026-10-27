@@ -29,6 +29,7 @@ import androidx.annotation.NonNull;
 import io.github.staernid.sunbeam.nvstream.NvConnection;
 import io.github.staernid.sunbeam.stream.DefaultStreamConnectivityDriver;
 import io.github.staernid.sunbeam.stream.StreamErrorResolver;
+import io.github.staernid.sunbeam.stream.StreamIntentParser;
 import io.github.staernid.sunbeam.stream.StreamLifecycleListener;
 import io.github.staernid.sunbeam.stream.StreamLifecycleManager;
 import io.github.staernid.sunbeam.stream.TerminationResolution;
@@ -283,6 +284,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        StreamIntentParser.applyStreamExtras(getIntent(), prefConfig);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
 
         if (prefConfig.fullScreen) {
@@ -1919,12 +1921,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     @Override
     public void onAppQuitSuccess(@NonNull String appName) {
-        Toast.makeText(Game.this, getResources().getString(R.string.applist_quit_success) + " " + appName, Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), getResources().getString(R.string.applist_quit_success) + " " + appName, Toast.LENGTH_LONG).show();
     }
 
     @Override
     public void onAppQuitFailure(@NonNull String message) {
-        Toast.makeText(Game.this, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     private void stopConnection() {
@@ -2252,6 +2254,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         if (menuCoordinator != null) {
             menuCoordinator.showQuitConfirmDialog(this, () -> {
                 quitOnStop = true;
+                if (lifecycleManager != null) {
+                    lifecycleManager.setQuitOnStop(true);
+                }
                 finish();
             });
         }

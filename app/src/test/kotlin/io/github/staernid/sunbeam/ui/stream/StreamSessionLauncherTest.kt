@@ -18,6 +18,7 @@ import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
 import io.github.staernid.sunbeam.core.preferences.models.VideoFormatOption
 import io.github.staernid.sunbeam.core.stream.model.AudioChannelConfiguration
 import io.github.staernid.sunbeam.core.stream.model.VideoFormat
+import io.github.staernid.sunbeam.stream.StreamIntentParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -201,5 +202,17 @@ class StreamSessionLauncherTest {
         assertTrue(intent.getBooleanExtra(Game.EXTRA_APP_HDR, false))
         assertEquals("test-host-uuid", intent.getStringExtra(Game.EXTRA_PC_UUID))
         assertEquals("Gaming Rig", intent.getStringExtra(Game.EXTRA_PC_NAME))
+    }
+
+    @Test
+    fun testCreateGameActivityIntent_withStreamConfig_populatesStreamExtras() = runTest {
+        val launcher = StreamSessionLauncher(fakeHostRepo, fakeAppRepo, fakePrefsRepo, fakeProfileRepo)
+        val config = launcher.resolveStreamConfig(testHost.uuid, testApp.id).getOrThrow()
+        val intent = launcher.createGameActivityIntent(context, testHost, testApp, config)
+
+        assertEquals(2560, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_WIDTH, 0))
+        assertEquals(1440, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_HEIGHT, 0))
+        assertEquals(120, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_FPS, 0))
+        assertEquals(50_000, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_BITRATE, 0))
     }
 }

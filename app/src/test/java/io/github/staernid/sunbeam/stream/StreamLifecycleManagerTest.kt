@@ -247,6 +247,31 @@ class StreamLifecycleManagerTest {
     }
 
     @Test
+    fun stopConnection_quitsAppWhenQuitOnStopRequestedDynamically() {
+        val driver = FakeConnectionDriver()
+        var quitCalled = false
+        val (manager, listener) =
+            createManager(
+                connectionDriver = driver,
+                appQuitter = { quitCalled = true },
+                quitOnStop = false,
+            )
+
+        manager.connectionStarted()
+        assertTrue(manager.isConnected)
+
+        manager.requestQuitOnStop()
+        manager.stopConnection()
+
+        assertFalse(manager.isConnected)
+        assertFalse(manager.isConnecting)
+        assertEquals(1, driver.stopCount)
+        assertEquals(1, listener.streamEndingCalls)
+        assertTrue(quitCalled)
+        assertEquals(listOf("TestApp"), listener.appQuitSuccessCalls)
+    }
+
+    @Test
     fun stageFailed_retryResolutionReturnsTrueAndNotifiesListener() {
         val resolver =
             StreamErrorResolver(

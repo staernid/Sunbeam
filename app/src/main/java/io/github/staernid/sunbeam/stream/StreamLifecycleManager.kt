@@ -51,7 +51,7 @@ class StreamLifecycleManager(
     private val decoderRenderer: VideoDecoderRenderer?,
     private val preferences: StreamLifecyclePreferences,
     private val appQuitter: AppQuitter?,
-    private val quitOnStop: Boolean,
+    var quitOnStop: Boolean,
     private val appName: String?,
     private val errorResolver: StreamErrorResolver,
     private val listener: StreamLifecycleListener,
@@ -105,6 +105,10 @@ class StreamLifecycleManager(
         private set
 
     var hasDisplayedFailureDialog: Boolean = false
+
+    fun requestQuitOnStop() {
+        quitOnStop = true
+    }
 
     fun startConnection(
         audioRenderer: AudioRenderer,

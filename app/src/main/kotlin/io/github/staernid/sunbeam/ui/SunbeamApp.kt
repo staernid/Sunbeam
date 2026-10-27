@@ -96,6 +96,10 @@ fun SunbeamApp(
         }
         streamViewModel.onQuitAction = {
             coroutineScope.launch {
+                val host = hostRepository.getHostByUuid(currentScreen.hostUuid)
+                if (host != null) {
+                    appRepository.quitCurrentApp(host)
+                }
                 streamSession?.stop()
                 navigator.popBack()
             }
@@ -261,13 +265,10 @@ private fun ScreenContent(
 
             val launchStream: (HostApp) -> Unit = { app ->
                 val host = appsUiState.host
-                if (host != null) {
-                    streamLauncher.launchGameActivity(context, host, app)
-                } else {
-                    coroutineScope.launch {
-                        hostRepository.getHostByUuid(screen.hostUuid)?.let { targetHost ->
-                            streamLauncher.launchGameActivity(context, targetHost, app)
-                        }
+                coroutineScope.launch {
+                    val targetHost = host ?: hostRepository.getHostByUuid(screen.hostUuid)
+                    if (targetHost != null) {
+                        streamLauncher.launchGameActivity(context, targetHost, app)
                     }
                 }
             }

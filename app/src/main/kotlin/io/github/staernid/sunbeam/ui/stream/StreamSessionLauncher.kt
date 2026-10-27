@@ -26,6 +26,7 @@ import io.github.staernid.sunbeam.features.profiles.model.fps
 import io.github.staernid.sunbeam.features.profiles.model.height
 import io.github.staernid.sunbeam.features.profiles.model.width
 import io.github.staernid.sunbeam.nvstream.http.NvHTTP
+import io.github.staernid.sunbeam.stream.StreamIntentParser
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.ByteArrayInputStream
@@ -115,6 +116,7 @@ class StreamSessionLauncher(
         context: Context,
         host: Host,
         app: HostApp,
+        config: StreamConfig? = null,
     ): Intent {
         val targetAddress = host.localAddress ?: host.remoteAddress ?: host.manualAddress ?: host.ipv6Address
         val uniqueId = IdentityManager(context).uniqueId
@@ -134,15 +136,33 @@ class StreamSessionLauncher(
             putExtra(Game.EXTRA_PC_NAME, host.name)
             putExtra(Game.EXTRA_UNIQUEID, uniqueId)
             host.serverCertDer?.let { putExtra(Game.EXTRA_SERVER_CERT, it) }
+
+            if (config != null) {
+                putExtra(StreamIntentParser.EXTRA_STREAM_WIDTH, config.width)
+                putExtra(StreamIntentParser.EXTRA_STREAM_HEIGHT, config.height)
+                putExtra(StreamIntentParser.EXTRA_STREAM_FPS, config.fps)
+                putExtra(StreamIntentParser.EXTRA_STREAM_BITRATE, config.bitrateKbps)
+            }
         }
+    }
+
+    suspend fun launchGameActivity(
+        context: Context,
+        host: Host,
+        app: HostApp,
+    ) {
+        val config = resolveStreamConfig(host.uuid, app.id).getOrNull()
+        val intent = createGameActivityIntent(context, host, app, config)
+        context.startActivity(intent)
     }
 
     fun launchGameActivity(
         context: Context,
         host: Host,
         app: HostApp,
+        config: StreamConfig,
     ) {
-        val intent = createGameActivityIntent(context, host, app)
+        val intent = createGameActivityIntent(context, host, app, config)
         context.startActivity(intent)
     }
 }
