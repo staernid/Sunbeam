@@ -1,5 +1,6 @@
 plugins {
     id("sunbeam.android.application")
+    id("sunbeam.android.compose")
 }
 
 android {
@@ -78,6 +79,10 @@ dependencies {
     implementation(project(":features:profiles"))
     implementation(project(":features:stream"))
 
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     implementation(libs.bouncycastle.bcprov)
     implementation(libs.bouncycastle.bcpkix)
     implementation(libs.jcodec)
@@ -101,4 +106,7 @@ dependencies {
     testImplementation(libs.test.androidx.core)
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.mockito)
+    testImplementation(libs.test.compose.ui.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
+    debugImplementation(libs.test.compose.ui.manifest)
 }

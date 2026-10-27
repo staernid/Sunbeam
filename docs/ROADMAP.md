@@ -44,7 +44,7 @@ wrapped and tested before it is touched.
 
 - [x] `core:preferences` module: typed settings domain models (`StreamSettings`, `Resolution`, enums), DataStore preferences repository (`DataStorePreferencesRepository`), and automated `SharedPreferencesMigration` from legacy preference keys
 - [x] `core:data` module: typed domain models (`Host`, `HostAddress`, `Profile`, `SunshineServerCapabilities`), backward-compatible `SqliteHostRepository` (`computers4.db`) and `JsonProfileRepository` (`profiles.json`) with reactive `Flow` emissions, and `SunshineServerInfoParser` for server codec capabilities and Sunshine/GFE detection
-- [ ] Connect `core:data` and `core:preferences` to drive UI and streaming configuration (Phase 4 bridge)
+- [x] Connect `core:data` and `core:preferences` to drive UI and streaming configuration (Phase 4 bridge)
 
 ## Phase 4: Compose UI, screen by screen
 
@@ -56,6 +56,7 @@ Order by risk. The stream screen goes last.
 4. [x] Settings (`features:settings` module: Compose UI, Material 3 categorized layout for Video/Display, Audio, Gamepad/Input, On-Screen Controls, and Performance Monitor, interactive pickers, live bitrate/deadzone/opacity sliders, and ViewModel backed by `PreferencesRepository`)
 5. [x] Profiles, on-screen controller editor, gamepad debug (`features:profiles` module: Compose UI, custom stream profiles management backed by `ProfileRepository`, gamepad input tester with live stick/trigger/button/rumble/gyro visualization, on-screen controls layout preview with live opacity/scale adjustments, and ViewModel)
 6. [x] Stream screen (`features:stream` module: Compose UI, `SurfaceView` wrapped in `AndroidView`, zero-allocation hardware presentation, performance stats HUD with Lite and Expanded diagnostics, transient connection warning banner, floating action buttons for menu and pan/zoom toggling, in-stream quick control menu, quit confirmation dialog, mouse mode picker, special keys keyboard shortcuts dialog, PiP lifecycle management, and ViewModel)
+7. [x] Navigation shell & entry point (`:app` `MainActivity`, `SunbeamApp`, `SunbeamNavigator`, adaptive Bottom Bar / Navigation Rail, linking Hosts -> Apps -> Stream, Settings, and Profiles with `StreamSessionLauncher` data & lifecycle bridge)
 
 Each screen: `features:<name>` module, UI + presenter (Molecule or ViewModel, to decide), screenshot tests.
 
