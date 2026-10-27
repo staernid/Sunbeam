@@ -67,6 +67,11 @@ dependencies {
     implementation(project(":core:stream"))
     implementation(project(":core:preferences"))
     implementation(project(":core:data"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":features:hosts"))
+    implementation(project(":features:apps"))
+    implementation(project(":features:settings"))
+    implementation(project(":features:profiles"))
 
     implementation(libs.bouncycastle.bcprov)
     implementation(libs.bouncycastle.bcpkix)
