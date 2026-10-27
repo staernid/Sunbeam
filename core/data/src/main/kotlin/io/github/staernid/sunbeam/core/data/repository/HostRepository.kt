@@ -31,4 +31,9 @@ interface HostRepository {
      * Deletes a host by its unique identifier.
      */
     suspend fun deleteHost(uuid: String)
+
+    /**
+     * Notifies the repository of an updated host (e.g. from mDNS auto-discovery or dynamic polling).
+     */
+    fun notifyHostUpdated(host: Host)
 }

@@ -14,6 +14,7 @@ import io.github.staernid.sunbeam.core.designsystem.theme.SunbeamTheme
 import io.github.staernid.sunbeam.core.preferences.DataStorePreferencesRepository
 import io.github.staernid.sunbeam.core.stream.NvStreamSession
 import io.github.staernid.sunbeam.data.NvAppNetworkDataSource
+import io.github.staernid.sunbeam.discovery.ComputerManagerBridge
 import io.github.staernid.sunbeam.ui.SunbeamApp
 import io.github.staernid.sunbeam.ui.stream.StreamSessionLauncher
 import kotlinx.coroutines.launch
@@ -43,6 +44,13 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val streamSession by lazy { NvStreamSession() }
+    private val computerBridge by lazy {
+        ComputerManagerBridge(
+            context = this,
+            hostRepository = hostRepository,
+            scope = lifecycleScope,
+        )
+    }
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +58,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
+            hostRepository.initialize()
             profileRepository.initialize()
         }
 
@@ -64,8 +73,24 @@ class MainActivity : ComponentActivity() {
                     profileRepository = profileRepository,
                     streamLauncher = streamLauncher,
                     streamSession = streamSession,
+                    hostOperationsHandler = computerBridge,
                 )
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        computerBridge.start()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        computerBridge.stop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        computerBridge.destroy()
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostApp
+import io.github.staernid.sunbeam.core.data.model.PairState
 import io.github.staernid.sunbeam.core.data.model.Profile
 import io.github.staernid.sunbeam.core.data.repository.AppRepository
 import io.github.staernid.sunbeam.core.data.repository.HostRepository
@@ -46,6 +47,7 @@ class SunbeamAppTest {
             uuid = "host-1",
             name = "Desktop Rig",
             localAddress = HostAddress("192.168.1.100"),
+            pairState = PairState.PAIRED,
         )
 
     private val testApp =
@@ -65,6 +67,8 @@ class SunbeamAppTest {
             override suspend fun saveHost(host: Host) {}
 
             override suspend fun deleteHost(uuid: String) {}
+
+            override fun notifyHostUpdated(host: Host) {}
         }
 
     private val fakeAppRepo =

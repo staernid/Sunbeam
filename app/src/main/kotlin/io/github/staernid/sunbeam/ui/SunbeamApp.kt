@@ -27,7 +27,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.staernid.sunbeam.core.data.model.HostApp
+import io.github.staernid.sunbeam.core.data.model.PairState
 import io.github.staernid.sunbeam.core.data.repository.AppRepository
+import io.github.staernid.sunbeam.core.data.repository.HostOperationsHandler
 import io.github.staernid.sunbeam.core.data.repository.HostRepository
 import io.github.staernid.sunbeam.core.data.repository.ProfileRepository
 import io.github.staernid.sunbeam.core.designsystem.adaptive.SunbeamNavigationType
@@ -67,6 +69,7 @@ fun SunbeamApp(
     modifier: Modifier = Modifier,
     navigator: SunbeamNavigator = remember { SunbeamNavigator() },
     streamSession: StreamSession? = null,
+    hostOperationsHandler: HostOperationsHandler? = null,
 ) {
     val adaptiveInfo = rememberSunbeamAdaptiveInfo(windowSizeClass)
     val coroutineScope = rememberCoroutineScope()
@@ -146,6 +149,7 @@ fun SunbeamApp(
                     preferencesRepository = preferencesRepository,
                     profileRepository = profileRepository,
                     navigator = navigator,
+                    hostOperationsHandler = hostOperationsHandler,
                 )
             }
         }
@@ -180,6 +184,7 @@ fun SunbeamApp(
                     preferencesRepository = preferencesRepository,
                     profileRepository = profileRepository,
                     navigator = navigator,
+                    hostOperationsHandler = hostOperationsHandler,
                 )
             }
         }
@@ -196,17 +201,24 @@ private fun ScreenContent(
     preferencesRepository: PreferencesRepository,
     profileRepository: ProfileRepository,
     navigator: SunbeamNavigator,
+    hostOperationsHandler: HostOperationsHandler? = null,
 ) {
     when (screen) {
         is SunbeamScreen.Hosts -> {
-            val hostsViewModel = remember(hostRepository) { HostsViewModel(hostRepository) }
+            val hostsViewModel = remember(hostRepository, hostOperationsHandler) {
+                HostsViewModel(hostRepository, hostOperationsHandler)
+            }
             val hostsUiState by hostsViewModel.uiState.collectAsStateWithLifecycle()
 
             HostsScreen(
                 uiState = hostsUiState,
                 windowSizeClass = windowSizeClass,
                 onHostClick = { host ->
-                    navigator.navigateTo(SunbeamScreen.Apps(host.uuid))
+                    if (host.pairState == PairState.NOT_PAIRED) {
+                        hostsViewModel.onStartPairingClicked(host)
+                    } else {
+                        navigator.navigateTo(SunbeamScreen.Apps(host.uuid))
+                    }
                 },
                 onHostLongClick = hostsViewModel::onHostLongClicked,
                 onPairClick = hostsViewModel::onStartPairingClicked,

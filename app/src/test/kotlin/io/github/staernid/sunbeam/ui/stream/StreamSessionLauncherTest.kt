@@ -60,6 +60,8 @@ class StreamSessionLauncherTest {
             override suspend fun saveHost(host: Host) {}
 
             override suspend fun deleteHost(uuid: String) {}
+
+            override fun notifyHostUpdated(host: Host) {}
         }
 
     private val fakeAppRepo =

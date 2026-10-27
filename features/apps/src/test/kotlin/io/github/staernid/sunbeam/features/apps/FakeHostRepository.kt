@@ -34,4 +34,15 @@ class FakeHostRepository(
     override suspend fun deleteHost(uuid: String) {
         hostsState.update { current -> current.filterNot { it.uuid == uuid } }
     }
+
+    override fun notifyHostUpdated(host: Host) {
+        hostsState.update { current ->
+            val index = current.indexOfFirst { it.uuid == host.uuid }
+            if (index >= 0) {
+                current.toMutableList().apply { set(index, host) }
+            } else {
+                current + host
+            }
+        }
+    }
 }

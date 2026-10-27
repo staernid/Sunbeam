@@ -6,7 +6,9 @@ import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostState
 import io.github.staernid.sunbeam.core.data.model.PairState
+import io.github.staernid.sunbeam.core.data.repository.HostOperationsHandler
 import io.github.staernid.sunbeam.core.data.repository.HostRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +20,13 @@ import java.util.UUID
 
 class HostsViewModel(
     private val hostRepository: HostRepository,
+    private val hostOperationsHandler: HostOperationsHandler? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HostsUiState(isLoading = true))
     val uiState: StateFlow<HostsUiState> = _uiState.asStateFlow()
 
     private val secureRandom = SecureRandom()
+    private var pairingJob: Job? = null
 
     init {
         observeHosts()
@@ -65,16 +69,31 @@ class HostsViewModel(
         }
 
         viewModelScope.launch {
-            val name = customName.trim().ifBlank { trimmedAddress }
-            val host = Host(
-                uuid = UUID.randomUUID().toString(),
-                name = name,
-                manualAddress = HostAddress(address = trimmedAddress),
-                state = HostState.UNKNOWN,
-                pairState = PairState.NOT_PAIRED,
-            )
-            hostRepository.saveHost(host)
-            _uiState.update { it.copy(dialogState = HostsDialogState.None) }
+            if (hostOperationsHandler != null) {
+                _uiState.update { it.copy(dialogState = HostsDialogState.None, isLoading = true) }
+                val result = hostOperationsHandler.addHost(trimmedAddress, customName)
+                result.onSuccess {
+                    _uiState.update { it.copy(isLoading = false) }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            userMessage = error.message ?: "Failed to connect to host",
+                        )
+                    }
+                }
+            } else {
+                val name = customName.trim().ifBlank { trimmedAddress }
+                val host = Host(
+                    uuid = UUID.randomUUID().toString(),
+                    name = name,
+                    manualAddress = HostAddress(address = trimmedAddress),
+                    state = HostState.UNKNOWN,
+                    pairState = PairState.NOT_PAIRED,
+                )
+                hostRepository.saveHost(host)
+                _uiState.update { it.copy(dialogState = HostsDialogState.None) }
+            }
         }
     }
 
@@ -85,6 +104,28 @@ class HostsViewModel(
     fun onStartPairingClicked(host: Host) {
         val pin = generatePairingPin()
         _uiState.update { it.copy(dialogState = HostsDialogState.Pairing(host, pin)) }
+
+        if (hostOperationsHandler != null) {
+            pairingJob?.cancel()
+            pairingJob = viewModelScope.launch {
+                val result = hostOperationsHandler.pairHost(host, pin)
+                result.onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            dialogState = HostsDialogState.None,
+                            userMessage = "Paired successfully with ${host.name}",
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            dialogState = HostsDialogState.None,
+                            userMessage = error.message ?: "Pairing failed",
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun onDeleteHostRequested(host: Host) {
@@ -99,6 +140,8 @@ class HostsViewModel(
     }
 
     fun onDismissDialog() {
+        pairingJob?.cancel()
+        pairingJob = null
         _uiState.update { it.copy(dialogState = HostsDialogState.None) }
     }
 
