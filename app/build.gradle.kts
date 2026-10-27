@@ -63,6 +63,10 @@ android {
 }
 
 dependencies {
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
     implementation(project(":core:native"))
     implementation(project(":core:stream"))
     implementation(project(":core:preferences"))
@@ -72,6 +76,7 @@ dependencies {
     implementation(project(":features:apps"))
     implementation(project(":features:settings"))
     implementation(project(":features:profiles"))
+    implementation(project(":features:stream"))
 
     implementation(libs.bouncycastle.bcprov)
     implementation(libs.bouncycastle.bcpkix)

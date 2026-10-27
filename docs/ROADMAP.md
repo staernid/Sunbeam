@@ -55,7 +55,7 @@ Order by risk. The stream screen goes last.
 3. [x] App grid (`features:apps` module: Compose UI, responsive poster grid, box art loading with fallback placeholders, active session running banner with quick resume and quit, search filter, hidden apps toggle, quit confirmation dialog, app details dialog, and ViewModel backed by `CachedAppRepository`)
 4. [x] Settings (`features:settings` module: Compose UI, Material 3 categorized layout for Video/Display, Audio, Gamepad/Input, On-Screen Controls, and Performance Monitor, interactive pickers, live bitrate/deadzone/opacity sliders, and ViewModel backed by `PreferencesRepository`)
 5. [x] Profiles, on-screen controller editor, gamepad debug (`features:profiles` module: Compose UI, custom stream profiles management backed by `ProfileRepository`, gamepad input tester with live stick/trigger/button/rumble/gyro visualization, on-screen controls layout preview with live opacity/scale adjustments, and ViewModel)
-6. Stream screen: keep the `SurfaceView`, wrap it in `AndroidView`, move overlays/menu to Compose
+6. [x] Stream screen (`features:stream` module: Compose UI, `SurfaceView` wrapped in `AndroidView`, zero-allocation hardware presentation, performance stats HUD with Lite and Expanded diagnostics, transient connection warning banner, floating action buttons for menu and pan/zoom toggling, in-stream quick control menu, quit confirmation dialog, mouse mode picker, special keys keyboard shortcuts dialog, PiP lifecycle management, and ViewModel)
 
 Each screen: `features:<name>` module, UI + presenter (Molecule or ViewModel, to decide), screenshot tests.
 
