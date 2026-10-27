@@ -1,0 +1,31 @@
+plugins {
+    id("sunbeam.android.library")
+    id("sunbeam.android.compose")
+}
+
+android {
+    namespace = "io.github.staernid.sunbeam.features.hosts"
+}
+
+dependencies {
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    api(project(":core:designsystem"))
+    api(project(":core:data"))
+
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.kotlinx.coroutines.android)
+
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.test.compose.ui.manifest)
+
+    testImplementation(libs.test.junit)
+    testImplementation(libs.test.androidx.core)
+    testImplementation(libs.test.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.test.compose.ui.junit4)
+}

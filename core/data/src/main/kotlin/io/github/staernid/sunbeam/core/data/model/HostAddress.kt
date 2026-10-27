@@ -5,7 +5,11 @@ package io.github.staernid.sunbeam.core.data.model
  */
 data class HostAddress(
     val address: String,
-    val port: Int,
+    val port: Int = DEFAULT_PORT,
 ) {
     override fun toString(): String = "$address:$port"
+
+    companion object {
+        const val DEFAULT_PORT = 47989
+    }
 }
