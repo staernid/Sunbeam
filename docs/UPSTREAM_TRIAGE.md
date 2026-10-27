@@ -22,8 +22,8 @@ Verdict legend: **PORT** = take it as is, **ADAPT** = take the idea, our code di
 | 6 | `280454fd` | Xbox Series S/X init packets (`SERIES_S_INIT`, PIDs `0x0b05/0x0b12/0x0b13`, `0x02fe`) | Ported | PORT | DONE (`ce4886ce`) |
 | 7 | `583f662a` | 8BitDo vendor in `XboxOneController` | Present | none | ALREADY PRESENT |
 | 8 | `0711e236` | `GameManager` crashes on Meta Quest / partial OEM impls | Adapted with try/catch | ADAPT | DONE (`07e2ae49`) |
-| 9 | `6d4c64a5` | `Surface.setProducerThrottlingEnabled(false)` on the video surface, lower latency (API 37 guard) | Missing | PORT, measure first | Pending measurement |
-| 10 | `68adf9ec` | Stop H.264 `constraint_set`/`level_idc` SPS patching on Android 8+ | Missing (we still patch) | PORT, needs device testing | Pending device test |
+| 9 | `6d4c64a5` | `Surface.setProducerThrottlingEnabled(false)` on the video surface, lower latency (API 37 guard) | Ported via `SurfaceUtils` | PORT | DONE (Phase 5) |
+| 10 | `68adf9ec` | Stop H.264 `constraint_set`/`level_idc` SPS patching on Android 8+ | Ported (disabled on API 26+) | PORT | DONE (Phase 5) |
 | 11 | `c2e224eb` | Sync SDL joystick code with upstream | Ported | PORT | DONE (`0d5b11ab`) |
 | 12 | `3df0103a` | Remove dead `< API 21` paths | n/a (our `minSdk` is 21) | PORT, trivial | Postponed to Phase 2 |
 

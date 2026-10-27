@@ -106,7 +106,11 @@ fun SunbeamApp(
         }
 
         StreamScreen(
-            onSurfaceCreated = {},
+            onSurfaceCreated = { holder ->
+                val surface = holder.surface
+                io.github.staernid.sunbeam.binding.video.SurfaceUtils
+                    .setProducerThrottlingEnabled(surface, false)
+            },
             onSurfaceChanged = { _, _, _, _ -> },
             onSurfaceDestroyed = {},
             viewModel = streamViewModel,

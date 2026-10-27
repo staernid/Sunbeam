@@ -1984,6 +1984,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             holder.getSurface().setFrameRate(desiredFrameRate,
                     Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
         }
+
+        // Disable producer throttling on the underlying surface for reduced latency (triage A9)
+        io.github.staernid.sunbeam.binding.video.SurfaceUtils.setProducerThrottlingEnabled(holder.getSurface(), false);
     }
 
     @Override

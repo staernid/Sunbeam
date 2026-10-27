@@ -142,6 +142,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private PerfOverlayListener perfListener;
 
     private GlesPassthroughBridge glesBridge;
+    private FramePacer framePacer;
+    private final MediaCodec.BufferInfo drainBufferInfo = new MediaCodec.BufferInfo();
     private float videoSrUpscaleRatio;
 
     private static final int CR_MAX_TRIES = 10;
@@ -612,8 +614,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         if (prefs.videoSr) {
             // SGSR1 Upscaling
+            boolean is10Bit = (getActiveVideoFormat() & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0;
             glesBridge = new GlesPassthroughBridge(this.context);
-            glesBridge.initialize(renderTarget, initialWidth, initialHeight);
+            glesBridge.initialize(renderTarget, initialWidth, initialHeight, is10Bit);
             Surface decoderSurface = glesBridge.getDecoderSurface();
 
             videoDecoder.configure(format, decoderSurface, null, 0);
@@ -627,7 +630,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             this.videoSrUpscaleRatio = 1.0f;
         }
 
-        try { applySurfaceFrameRate(renderTarget, targetFps); } catch (Throwable ignored) {}
+        SurfaceUtils.applySurfaceFrameRate(renderTarget, (float) targetFps);
+        SurfaceUtils.setProducerThrottlingEnabled(renderTarget, false);
 
         try {
             MediaCodecInfo __info = (android.os.Build.VERSION.SDK_INT >= 21) ? videoDecoder.getCodecInfo() : null;
@@ -1113,35 +1117,15 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         // Don't render unless a new frame is due. This prevents microstutter when streaming
         // at a frame rate that doesn't match the display (such as 60 FPS on 120 Hz).
-        long actualFrameTimeDeltaNs = frameTimeNanos - lastRenderedFrameTimeNanos;
-        long expectedFrameTimeDeltaNs = 800000000 / refreshRate; // within 80% of the next frame
-        if (actualFrameTimeDeltaNs >= expectedFrameTimeDeltaNs) {
+        if (framePacer == null || framePacer.isFrameDueBalanced(frameTimeNanos, lastRenderedFrameTimeNanos)) {
             // Render up to one frame when in frame pacing mode.
-            //
-            // NB: Since the queue limit is 2, we won't starve the decoder of output buffers
-            // by holding onto them for too long. This also ensures we will have that 1 extra
-            // frame of buffer to smooth over network/rendering jitter.
             Integer nextOutputBuffer = outputBufferQueue.poll();
             if (nextOutputBuffer != null) {
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        if (preferLowerDelays) {
-                            // ULL: present at next VSYNC (no scheduling)
-                            releaseWithPolicy(nextOutputBuffer, System.nanoTime());} else {
-                            // Smooth/Balanced: keep timestamp scheduling
-                            videoDecoder.releaseOutputBuffer(nextOutputBuffer, frameTimeNanos);
-                        }
-
-                    }
-                    else {
-                        if (android.os.Build.VERSION.SDK_INT >= 21) {
-                            long __ts = System.nanoTime();
-                            releaseWithPolicy(nextOutputBuffer, System.nanoTime());} else {
-                            if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                long __ts = System.nanoTime();
-                                releaseWithPolicy(nextOutputBuffer, frameTimeNanos);} else {
-                                releaseWithPolicy(nextOutputBuffer, frameTimeNanos);}
-                        }
+                    if (preferLowerDelays) {
+                        releaseWithPolicy(nextOutputBuffer, System.nanoTime());
+                    } else {
+                        releaseWithPolicy(nextOutputBuffer, frameTimeNanos);
                     }
 
                     if (prefs.videoSr && glesBridge != null) {
@@ -1156,7 +1140,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         videoDecoder.releaseOutputBuffer(nextOutputBuffer, false);
                     } catch (IllegalStateException e) {
                         // This will leak nextOutputBuffer, but there's really nothing else we can do
-                        e.printStackTrace();
+                        LimeLog.severe("Failed to release output buffer: " + e.getMessage());
                         handleDecoderException(e);
                     }
                 }
@@ -1229,30 +1213,16 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     }
                 } catch (Throwable ignored) {}
 
-                // Aggressive/adaptive state
-                final double EWMA_ALPHA = 0.25;
-                final double MIN_FACTOR = 1.00;
-                final double MAX_FACTOR = 1.20;
+                framePacer = new FramePacer(prefs.framePacing, targetFps, displayHz, preferLowerDelays);
 
-                long   lastDecoderPtsUs        = 0L;
-                long   lastPresentNs           = 0L;
-                long   lastDropNs              = 0L;
-                int    lateStreak              = 0;
-                int    tryAgainStreak          = 0;
-                int    recentDrops             = 0;
-
-                double ewmaInterArrivalNs      = (1_000_000_000.0 / Math.max(1, tfps));
-                double ewmaDecodeToPresentNs   = periodNs * 0.7;
-                double ewmaJitterNs            = periodNs * 0.1;
-
+                int tryAgainStreak = 0;
                 BufferInfo info = new BufferInfo();
                 long lastOutputNs = System.nanoTime();
                 while (!stopping) {
                     /* LATEST_ONLY_LOW_LATENCY */
                     if (!preferLowerDelays) {
                         try {
-                            android.media.MediaCodec.BufferInfo __tmpInfo = new android.media.MediaCodec.BufferInfo();
-                            int __idx = videoDecoder.dequeueOutputBuffer(__tmpInfo, 0);
+                            int __idx = videoDecoder.dequeueOutputBuffer(drainBufferInfo, 0);
                             int __last = -1;
                             long __lastPtsUs = -1L;
 
@@ -1262,20 +1232,17 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     try { videoDecoder.releaseOutputBuffer(__last, false); } catch (Throwable ignored) {}
                                 }
                                 __last = __idx;
-                                __lastPtsUs = __tmpInfo.presentationTimeUs;
-                                __idx = videoDecoder.dequeueOutputBuffer(__tmpInfo, 0);
+                                __lastPtsUs = drainBufferInfo.presentationTimeUs;
+                                __idx = videoDecoder.dequeueOutputBuffer(drainBufferInfo, 0);
                             }
 
                             if (__last >= 0) {
                                 long __nowNs = System.nanoTime();
-                                if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                    releaseWithPolicy(__last, System.nanoTime());} else {
-                                    releaseWithPolicy(__last, System.nanoTime());}
+                                releaseWithPolicy(__last, __nowNs);
 
                                 // Update decode->present EWMA and decode stats if we have a valid PTS
                                 if (__lastPtsUs >= 0) {
-                                    long __d2pNs = __nowNs - (__lastPtsUs * 1000L);
-                                    ewmaDecodeToPresentNs += EWMA_ALPHA * (__d2pNs - ewmaDecodeToPresentNs);
+                                    framePacer.onFrameRendered(__lastPtsUs, __nowNs);
                                     try { updateDecodeLatencyStats(__lastPtsUs); } catch (Throwable ignored) {}
                                 }
 
@@ -1291,7 +1258,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         int outIndex = videoDecoder.dequeueOutputBuffer(info, getOutputDequeueTimeoutUs());
 
                         if (outIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                            // reduced backoff 0–500 µs
                             tryAgainStreak++;
                             int backoffUs = (tryAgainStreak <= 2) ? 250 : 500;
                             outIndex = videoDecoder.dequeueOutputBuffer(info, backoffUs);
@@ -1300,7 +1266,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                         }
 
                         if (outIndex >= 0) {
-                            // --- flags per gestire le statistiche in modo robusto ---
                             boolean statsUpdated = false;
                             boolean frameDropped = false;
 
@@ -1308,16 +1273,6 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                             int lastIndex = outIndex;
 
                             numFramesOut++;
-
-                            // aggiorna inter-arrival
-                            if (lastDecoderPtsUs != 0L) {
-                                long interUs = presentationTimeUs - lastDecoderPtsUs;
-                                if (interUs > 0) {
-                                    double sample = interUs * 1000.0;
-                                    ewmaInterArrivalNs += EWMA_ALPHA * (sample - ewmaInterArrivalNs);
-                                }
-                            }
-                            lastDecoderPtsUs = presentationTimeUs;
 
                             // Render the latest frame now if frame pacing isn't in balanced mode
                             if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED) {
@@ -1331,138 +1286,24 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                     presentationTimeUs = info.presentationTimeUs;
                                 }
 
-                                if (prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
-                                        prefs.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
-                                    // In max smoothness or cap FPS mode, we want to never drop frames
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        final long nowNs = System.nanoTime();
-                                        final long frameAgeNs = nowNs - (presentationTimeUs * 1000L);
+                                framePacer.onFrameArrived(presentationTimeUs);
 
-                                        // Smoothness: tighter threshold 1.05..1.2×
-                                        double pressure = Math.min(1.0, (ewmaJitterNs / vsyncPeriodNs) + (recentDrops * 0.1));
-                                        double factorSmooth = 1.2 - 0.15 * (1.0 - pressure);
-                                        factorSmooth = Math.max(1.05, Math.min(1.2, factorSmooth));
-
-                                        long dropThresholdSmoothNs = (long)(periodNs * factorSmooth);
-
-                                        if (frameAgeNs >= dropThresholdSmoothNs) {
-                                            if (preferLowerDelays) {
-                                                // ULL: present at next VSYNC (no scheduling)
-                                                releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                                // Smooth/Balanced: keep timestamp scheduling
-                                                videoDecoder.releaseOutputBuffer(lastIndex, /* render */ false);
-                                            }
-
-                                            frameDropped = true;
-                                            lastDropNs = nowNs;
-                                            recentDrops = Math.min(10, recentDrops + 1);
-                                            continue;
-                                        }
-
-                                        if (preferLowerDelays) {
-                                            // ULL: present at next VSYNC (no scheduling)
-                                            releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                            // Smooth/Balanced: keep timestamp scheduling
-                                            videoDecoder.releaseOutputBuffer(lastIndex, nowNs);
-                                        }
-
-                                        lastPresentNs = nowNs;
-                                        recentDrops = Math.max(0, recentDrops - 1);
-
-                                        // [STATS] update subito dopo il present
-                                        updateDecodeLatencyStats(presentationTimeUs);
-                                        statsUpdated = true;
-
+                                long nowNs = System.nanoTime();
+                                if (framePacer.shouldDropFrame(presentationTimeUs, nowNs, tryAgainStreak)) {
+                                    if (preferLowerDelays) {
+                                        releaseWithPolicy(lastIndex, nowNs);
                                     } else {
-                                        if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                            long __ts = System.nanoTime();
-                                            releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                            if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                                long __ts = System.nanoTime();
-                                                releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                                videoDecoder.releaseOutputBuffer(lastIndex, false);
-                                            }
-                                        }
-
-                                        // [STATS] anche su pre-Lollipop, dopo presentazione
-                                        updateDecodeLatencyStats(presentationTimeUs);
-                                        statsUpdated = true;
+                                        videoDecoder.releaseOutputBuffer(lastIndex, false);
                                     }
+                                    frameDropped = true;
+                                    continue;
                                 }
-                                else {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        final long nowNs = System.nanoTime();
-                                        final long frameAgeNs = nowNs - (presentationTimeUs * 1000L);
 
-                                        // Latency: 1.0..1.15×, debounce = 1, cooldown = 0.5×
-                                        double backPressure = Math.min(1.0, (double)tryAgainStreak / 6.0);
-                                        double streamHz = Math.max(1.0, (double)tfps);
-                                        double mismatch = Math.abs((1_000_000_000.0 / streamHz) - (1_000_000_000.0 / Math.max(1.0, displayHz))) / vsyncPeriodNs;
-                                        mismatch = Math.min(2.0, mismatch);
-
-                                        double factorLatency = 1.02 + 0.13 * (0.5 * (ewmaJitterNs / vsyncPeriodNs)
-                                                + 0.3 * backPressure
-                                                + 0.2 * mismatch);
-                                        factorLatency = Math.max(MIN_FACTOR, Math.min(1.15, factorLatency));
-
-                                        long dropThresholdNs = (long)(periodNs * factorLatency);
-
-                                        final long sinceLastPresent = (lastPresentNs == 0L) ? Long.MAX_VALUE : (nowNs - lastPresentNs);
-                                        final boolean dropCooldownOk = (nowNs - lastDropNs) >= (periodNs / 2);
-                                        final boolean isLate = frameAgeNs > dropThresholdNs;
-                                        lateStreak = isLate ? (lateStreak + 1) : 0;
-
-                                        final boolean shouldDrop =
-                                                isLate &&
-                                                        (lateStreak >= 1) &&
-                                                        (sinceLastPresent < (long)(periodNs * 0.5)) &&
-                                                        dropCooldownOk;
-
-                                        if (shouldDrop) {
-                                            if (preferLowerDelays) {
-                                                // ULL: present at next VSYNC (no scheduling)
-                                                releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                                // Smooth/Balanced: keep timestamp scheduling
-                                                videoDecoder.releaseOutputBuffer(lastIndex, /* render */ false);
-                                            }
-
-                                            frameDropped = true;
-                                            lastDropNs = nowNs;
-                                            recentDrops = Math.min(10, recentDrops + 1);
-                                            continue; // niente stats sui frame droppati
-                                        }
-
-                                        if (preferLowerDelays) {
-                                            // ULL: present at next VSYNC (no scheduling)
-                                            releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                            // Smooth/Balanced: keep timestamp scheduling
-                                            videoDecoder.releaseOutputBuffer(lastIndex, nowNs);
-                                        }
-
-                                        lastPresentNs = nowNs;
-                                        if (!isLate) lateStreak = 0;
-                                        recentDrops = Math.max(0, recentDrops - 1);
-
-                                        // [STATS] update subito dopo il present
-                                        updateDecodeLatencyStats(presentationTimeUs);
-                                        statsUpdated = true;
-
-                                    } else {
-                                        if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                            long __ts = System.nanoTime();
-                                            releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                            if (android.os.Build.VERSION.SDK_INT >= 21) {
-                                                long __ts = System.nanoTime();
-                                                releaseWithPolicy(lastIndex, System.nanoTime());} else {
-                                                videoDecoder.releaseOutputBuffer(lastIndex, false);
-                                            }
-                                        }
-
-                                        // [STATS] anche su pre-Lollipop, dopo presentazione
-                                        updateDecodeLatencyStats(presentationTimeUs);
-                                        statsUpdated = true;
-                                    }
-                                }
+                                long presentationTargetNs = framePacer.computePresentationTimestamp(presentationTimeUs, nowNs);
+                                releaseWithPolicy(lastIndex, presentationTargetNs);
+                                framePacer.onFrameRendered(presentationTimeUs, nowNs);
+                                updateDecodeLatencyStats(presentationTimeUs);
+                                statsUpdated = true;
 
                                 if (prefs.videoSr && glesBridge != null) {
                                     glesBridge.renderFrame(0);
@@ -1471,6 +1312,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                                 activeWindowVideoStats.totalFramesRendered++;
                             }
                             else {
+                                framePacer.onFrameArrived(presentationTimeUs);
                                 // For balanced frame pacing case, the Choreographer callback will handle rendering.
                                 // We just put all frames into the output buffer queue and let it handle things.
 
@@ -1690,6 +1532,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             glesBridge.release();
             glesBridge = null;
         }
+        if (framePacer != null) {
+            framePacer.reset();
+            framePacer = null;
+        }
         videoDecoder.release();
     }
 
@@ -1780,8 +1626,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             sps.constraintSet4Flag = true;
             sps.constraintSet5Flag = true;
         }
-        else {
-            // Force the constraints unset otherwise (some may be set by default)
+        else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            // Force the constraints unset otherwise (some may be set by default on ancient Android versions)
             sps.constraintSet4Flag = false;
             sps.constraintSet5Flag = false;
         }
@@ -1897,8 +1743,16 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     sb.append(context.getString(R.string.perf_overlay_decoder, decoder)).append('\n');
                     // Add the video enhancement line if SR is enabled
                     if (prefs.videoSr) {
-                        // Pre-calculated ratio during decoder configuration
-                        sb.append(context.getString(R.string.perf_overlay_video_enhancement, videoSrUpscaleRatio)).append('\n');
+                        sb.append(context.getString(R.string.perf_overlay_video_enhancement, videoSrUpscaleRatio));
+                        if (glesBridge != null) {
+                            sb.append(String.format(java.util.Locale.US, " (%.2f ms)", glesBridge.getAverageRenderLatencyUs() / 1000f));
+                        }
+                        sb.append('\n');
+                    }
+                    if (framePacer != null) {
+                        sb.append(String.format(java.util.Locale.US, "Frame Pacing: %s (Jitter: %.2f ms)\n",
+                                getFramePacingName(prefs.framePacing),
+                                framePacer.getEwmaJitterNs() / 1_000_000.0));
                     }
                     sb.append(context.getString(R.string.perf_overlay_incomingfps, fps.receivedFps)).append('\n');
                     sb.append(context.getString(R.string.perf_overlay_renderingfps, fps.renderedFps)).append('\n');
@@ -1966,7 +1820,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 // Since we only need one frame buffered, we'll set the level as low as we can
                 // for known resolution combinations. Reference frame invalidation may need
                 // these, so leave them be for those decoders.
-                if (!refFrameInvalidationActive) {
+                if (!refFrameInvalidationActive && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                     if (initialWidth <= 720 && initialHeight <= 480 && refreshRate <= 60) {
                         // Max 5 buffered frames at 720x480x60
                         LimeLog.info("Patching level_idc to 31");
@@ -1996,7 +1850,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                 //
                 // It does break reference frame invalidation, so we will not do that for decoders
                 // where we've enabled reference frame invalidation.
-                if (!refFrameInvalidationActive) {
+                if (!refFrameInvalidationActive && Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                     LimeLog.info("Patching num_ref_frames in SPS");
                     sps.numRefFrames = 1;
                 }
@@ -2468,15 +2322,16 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     private void applySurfaceFrameRate(android.view.Surface surface, int targetFps) {
         if (surface == null) return;
-        try {
-            // API 30+ supports Surface.setFrameRate; for older, attempt View-based call elsewhere.
-            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                surface.setFrameRate((float) targetFps,
-                        android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
-                LimeLog.info("Applied Surface frame rate: " + targetFps + " Hz");
-            }
-        } catch (Throwable t) {
-            // best-effort
+        SurfaceUtils.applySurfaceFrameRate(surface, (float) targetFps);
+    }
+
+    private String getFramePacingName(int mode) {
+        switch (mode) {
+            case PreferenceConfiguration.FRAME_PACING_BALANCED: return "Balanced";
+            case PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS: return "Smoothness";
+            case PreferenceConfiguration.FRAME_PACING_CAP_FPS: return "Capped";
+            case PreferenceConfiguration.FRAME_PACING_MIN_LATENCY:
+            default: return "Lowest Latency";
         }
     }
 

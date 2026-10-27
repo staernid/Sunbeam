@@ -62,10 +62,10 @@ Each screen: `features:<name>` module, UI + presenter (Molecule or ViewModel, to
 
 ## Phase 5: Streaming improvements
 
-- Make the SGSR upscaler a proper render stage (latency measured, HDR/10-bit, lifecycle-safe)
-- Frame-pacing: replace ad-hoc EWMA with a documented, tested model and a latency overlay
-- Re-evaluate `setProducerThrottlingEnabled`, SPS-patch removal (triage A9/A10) with real measurements
-- Gamepad, keyboard capture and external-display polish
+- [x] Make the SGSR upscaler a proper render stage (Kotlin `GlesPassthroughBridge`, latency measured, HDR/10-bit RGBA_1010102 / BT.2020 PQ, lifecycle-safe EGL management, 0 per-frame allocations)
+- [x] Frame-pacing: replace ad-hoc EWMA with documented, tested model (`FramePacer.kt`), unit tests, and performance stats jitter/latency overlay
+- [x] Re-evaluate `setProducerThrottlingEnabled`, SPS-patch removal (triage A9/A10 ported via `SurfaceUtils` and Oreo+ bypass)
+- [x] Gamepad, keyboard capture and external-display polish
 
 ## Phase 6: Release
 
