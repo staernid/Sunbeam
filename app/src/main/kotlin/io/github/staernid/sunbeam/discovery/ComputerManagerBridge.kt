@@ -168,7 +168,10 @@ class ComputerManagerBridge(
             )
 
             if (httpConn.pairState == PairingManager.PairState.PAIRED) {
-                val updated = host.copy(pairState = PairState.PAIRED)
+                val updated = host.copy(
+                    pairState = PairState.PAIRED,
+                    httpsPort = if (httpConn.resolvedHttpsPort != 0) httpConn.resolvedHttpsPort else host.httpsPort,
+                )
                 hostRepository.notifyHostUpdated(updated)
                 startPollingInternal()
                 return@withContext Result.success(Unit)
@@ -187,6 +190,7 @@ class ComputerManagerBridge(
                     val updated = host.copy(
                         pairState = PairState.PAIRED,
                         serverCertDer = pairedCert?.encoded,
+                        httpsPort = if (httpConn.resolvedHttpsPort != 0) httpConn.resolvedHttpsPort else host.httpsPort,
                     )
                     hostRepository.saveHost(updated)
                     hostRepository.notifyHostUpdated(updated)
@@ -275,6 +279,7 @@ class ComputerManagerBridge(
             currentGameId = runningGameId,
             currentGameUuid = runningGameUUID,
             capabilities = caps,
+            httpsPort = httpsPort,
         )
     }
 

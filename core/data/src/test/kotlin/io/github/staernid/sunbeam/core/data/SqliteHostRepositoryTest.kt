@@ -49,6 +49,7 @@ class SqliteHostRepositoryTest {
                     remoteAddress = HostAddress("myhost.duckdns.org", 47984),
                     macAddress = "00:11:22:33:44:55",
                     serverCertDer = byteArrayOf(1, 2, 3, 4, 5),
+                    httpsPort = 47984,
                 )
 
             repository.saveHost(host)
@@ -62,6 +63,7 @@ class SqliteHostRepositoryTest {
             assertEquals("myhost.duckdns.org", retrieved?.remoteAddress?.address)
             assertEquals(47984, retrieved?.remoteAddress?.port)
             assertEquals("00:11:22:33:44:55", retrieved?.macAddress)
+            assertEquals(47984, retrieved?.httpsPort)
 
             val allHosts = repository.getAllHosts()
             assertEquals(1, allHosts.size)

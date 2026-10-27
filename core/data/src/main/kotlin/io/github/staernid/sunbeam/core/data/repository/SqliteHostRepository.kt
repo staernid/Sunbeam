@@ -163,6 +163,7 @@ class SqliteHostRepository(
         var remoteAddr: HostAddress? = null
         var manualAddr: HostAddress? = null
         var ipv6Addr: HostAddress? = null
+        var storedHttpsPort = 0
 
         try {
             val json = JSONObject(addressesJson)
@@ -170,6 +171,7 @@ class SqliteHostRepository(
             remoteAddr = addressFromJson(json.optJSONObject(FIELD_REMOTE))
             manualAddr = addressFromJson(json.optJSONObject(FIELD_MANUAL))
             ipv6Addr = addressFromJson(json.optJSONObject(FIELD_IPV6))
+            storedHttpsPort = json.optInt(FIELD_HTTPS_PORT, 0)
         } catch (e: JSONException) {
             // Ignore corrupted address JSON
         }
@@ -191,6 +193,7 @@ class SqliteHostRepository(
             currentGameId = cached?.currentGameId ?: 0,
             currentGameUuid = cached?.currentGameUuid,
             capabilities = cached?.capabilities ?: SunshineServerCapabilities.DEFAULT,
+            httpsPort = cached?.httpsPort ?: storedHttpsPort,
         )
     }
 
@@ -200,6 +203,9 @@ class SqliteHostRepository(
         root.put(FIELD_REMOTE, addressToJson(host.remoteAddress))
         root.put(FIELD_MANUAL, addressToJson(host.manualAddress))
         root.put(FIELD_IPV6, addressToJson(host.ipv6Address))
+        if (host.httpsPort != 0) {
+            root.put(FIELD_HTTPS_PORT, host.httpsPort)
+        }
         return root.toString()
     }
 
@@ -231,6 +237,7 @@ class SqliteHostRepository(
         private const val FIELD_REMOTE = "remote"
         private const val FIELD_MANUAL = "manual"
         private const val FIELD_IPV6 = "ipv6"
+        private const val FIELD_HTTPS_PORT = "httpsPort"
 
         private const val FIELD_ADDRESS = "address"
         private const val FIELD_PORT = "port"

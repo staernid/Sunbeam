@@ -17,6 +17,7 @@ data class Host(
     val currentGameId: Int = 0,
     val currentGameUuid: String? = null,
     val capabilities: SunshineServerCapabilities = SunshineServerCapabilities.DEFAULT,
+    val httpsPort: Int = 0,
 ) {
     @Suppress("CyclomaticComplexMethod")
     override fun equals(other: Any?): Boolean {
@@ -41,6 +42,7 @@ data class Host(
         if (currentGameId != other.currentGameId) return false
         if (currentGameUuid != other.currentGameUuid) return false
         if (capabilities != other.capabilities) return false
+        if (httpsPort != other.httpsPort) return false
 
         return true
     }
@@ -59,6 +61,7 @@ data class Host(
         result = 31 * result + currentGameId
         result = 31 * result + (currentGameUuid?.hashCode() ?: 0)
         result = 31 * result + capabilities.hashCode()
+        result = 31 * result + httpsPort
         return result
     }
 }

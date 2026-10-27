@@ -23,6 +23,15 @@ import java.security.cert.X509Certificate
 class NvAppNetworkDataSource(
     private val context: Context,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val httpFactory: (
+        address: ComputerDetails.AddressTuple,
+        httpsPort: Int,
+        uniqueId: String,
+        serverCert: X509Certificate?,
+        cryptoProvider: io.github.staernid.sunbeam.nvstream.http.LimelightCryptoProvider,
+    ) -> NvHTTP = { address, httpsPort, uniqueId, serverCert, cryptoProvider ->
+        NvHTTP(address, httpsPort, uniqueId, serverCert, cryptoProvider)
+    },
 ) : AppNetworkDataSource {
     private val identityManager = IdentityManager(context)
 
@@ -36,9 +45,9 @@ class NvAppNetworkDataSource(
             try {
                 val cert = parseCertificate(host.serverCertDer)
                 val httpConn =
-                    NvHTTP(
+                    httpFactory(
                         ComputerDetails.AddressTuple(address.address, address.port),
-                        address.port,
+                        host.httpsPort,
                         identityManager.uniqueId,
                         cert,
                         PlatformBinding.getCryptoProvider(context),
@@ -61,9 +70,9 @@ class NvAppNetworkDataSource(
             try {
                 val cert = parseCertificate(host.serverCertDer)
                 val httpConn =
-                    NvHTTP(
+                    httpFactory(
                         ComputerDetails.AddressTuple(address.address, address.port),
-                        address.port,
+                        host.httpsPort,
                         identityManager.uniqueId,
                         cert,
                         PlatformBinding.getCryptoProvider(context),

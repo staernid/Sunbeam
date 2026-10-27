@@ -25,6 +25,8 @@ class AppsViewModel(
     private val _uiState = MutableStateFlow(AppsUiState(isLoading = true))
     val uiState: StateFlow<AppsUiState> = _uiState.asStateFlow()
 
+    private var initialRefreshAttempted = false
+
     init {
         observeHost()
         observeApps()
@@ -35,6 +37,10 @@ class AppsViewModel(
             hostRepository.hostsFlow.collect { hosts ->
                 val matchedHost = hosts.find { it.uuid == hostUuid }
                 _uiState.update { it.copy(host = matchedHost) }
+                if (matchedHost != null && !initialRefreshAttempted) {
+                    initialRefreshAttempted = true
+                    onRefresh()
+                }
             }
         }
     }
