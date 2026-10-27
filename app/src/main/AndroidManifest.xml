@@ -243,6 +243,10 @@
             android:label="Usb Driver Service" />
 
         <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="true" />
+
+        <activity
             android:name=".HelpActivity"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"

@@ -28,4 +28,5 @@ dependencies {
     testImplementation(libs.test.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.test.compose.ui.junit4)
+    testImplementation(libs.test.compose.ui.manifest)
 }
