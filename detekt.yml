@@ -5,6 +5,12 @@ build:
 naming:
   PackageNaming:
     active: true
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+
+complexity:
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
 
 exceptions:
   PrintStackTrace:
@@ -13,3 +19,5 @@ exceptions:
 style:
   ForbiddenComment:
     active: false
+  MagicNumber:
+    ignorePropertyDeclaration: true

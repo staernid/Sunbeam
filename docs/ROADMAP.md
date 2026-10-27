@@ -50,7 +50,7 @@ wrapped and tested before it is touched.
 
 Order by risk. The stream screen goes last.
 
-1. Theme and design system (Material 3, dynamic color, TV/tablet/foldable window size classes)
+1. [x] Theme and design system (`core:designsystem` module: Material 3, warm solar amber/cyan palettes, OLED pure black mode, dynamic color on API 31+, TV/foldable/tablet window size class adaptive layout info, and D-pad focus highlight helpers)
 2. Host list and pairing
 3. App grid
 4. Settings (the biggest win, replaces a 1.1k-line `StreamSettings`)
