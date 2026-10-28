@@ -7,11 +7,11 @@ package io.github.staernid.sunbeam.stream.overlay
 
 import android.app.AlertDialog
 import android.content.Context
+import android.preference.PreferenceManager
 import io.github.staernid.sunbeam.Game
 import io.github.staernid.sunbeam.R
 import io.github.staernid.sunbeam.binding.input.GameInputDevice
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration
-import io.github.staernid.sunbeam.profiles.ProfilesManager
 import io.github.staernid.sunbeam.utils.ExternalDisplayControlActivity
 import io.github.staernid.sunbeam.utils.MouseModeOption
 
@@ -113,7 +113,8 @@ class StreamMenuCoordinator
                     } else {
                         onApplyMouseMode.onMouseModeSelected(selected.index)
                         if (prefConfig.rememberMouseMode) {
-                            ProfilesManager.getInstance().getOverlayingSharedPreferences(context)
+                            @Suppress("DEPRECATION")
+                            PreferenceManager.getDefaultSharedPreferences(context)
                                 .edit()
                                 .putString("mouse_mode_list", selected.index.toString())
                                 .apply()

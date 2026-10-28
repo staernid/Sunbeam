@@ -111,7 +111,7 @@
     <!-- General strings -->
     <string name="ip_hint">IP address of host PC</string>
     <string name="searching_pc">Searching for host PCs on your local network…\n\n
-        Ensure Apollo is running on your host PC.</string>
+        Ensure Sunshine is running on your host PC.</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="lost_connection">Lost connection to PC</string>
@@ -420,7 +420,7 @@
     <string name="summary_manual_enter_bitrate">Enter bitrate manually.\nCan exceed the maximum range of the seekbar.</string>
     <string name="dialog_manual_enter_bitrate">Enter bitrate in Mbps. Round to 0.5.</string>
     <string name="title_custom_refresh_rate">Custom refresh rate</string>
-    <string name="summary_custom_refresh_rate">Enter refresh rate manually. Only supports Apollo.</string>
+    <string name="summary_custom_refresh_rate">Enter refresh rate manually.</string>
     <string name="dialog_custom_refresh_rate">Enter refresh rate in Hz. Can be fractional.</string>
     <string name="title_render_mode">Render Mode</string>
     <string name="title_render_mode_convergence_title">3D Convergence</string>
@@ -661,7 +661,7 @@
     <string name="file_export_cancelled">File export cancelled.</string>
     <string name="app_removed_from_pc">App removed from PC</string>
     <string name="title_export_sunshine_launcher_file">Export Launcher File for Sunshine</string>
-    <string name="message_export_sunshine_launcher_file">Exporting launcher file for Sunshine is unstable, and may break at any moment. You\'ll need to export again every time if you changed the app name or image.\nUse Apollo for a more stable experience.</string>
+    <string name="message_export_sunshine_launcher_file">Exporting launcher file for Sunshine is unstable, and may break at any moment. You\'ll need to export again every time if you changed the app name or image.</string>
 
     <string name="title_enable_commit_text">Enable commit-text input (swipe/voice)</string>
     <string name="summary_enable_commit_text">Forward multi-character text from soft keyboards (gesture typing, predictions, voice dictation). May break games that rely on key-by-key input.</string>

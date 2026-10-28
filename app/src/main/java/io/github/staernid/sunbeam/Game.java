@@ -43,8 +43,8 @@ import io.github.staernid.sunbeam.nvstream.jni.MoonBridge;
 import io.github.staernid.sunbeam.preferences.GlPreferences;
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration;
 import androidx.compose.ui.platform.ComposeView;
+import android.preference.PreferenceManager;
 import io.github.staernid.sunbeam.features.stream.StreamViewModel;
-import io.github.staernid.sunbeam.profiles.ProfilesManager;
 import io.github.staernid.sunbeam.ui.ExternalControllerView;
 import io.github.staernid.sunbeam.ui.GameGestures;
 import io.github.staernid.sunbeam.ui.StreamContainer;
@@ -2159,8 +2159,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private void initMouseMode() {
         String[] mouseModes = getResources().getStringArray(R.array.mouse_mode_names);
 
-        String savedMouseModeIndexStr = ProfilesManager.getInstance()
-                .getOverlayingSharedPreferences(this)
+        String savedMouseModeIndexStr = PreferenceManager.getDefaultSharedPreferences(this)
                 .getString("mouse_mode_list", "0");
 
         int savedMouseModeIndex;
