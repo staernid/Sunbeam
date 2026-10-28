@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Sunbeam: Android game-stream client (Moonlight lineage) for the official Sunshine server. Moving from legacy Java in `:app` to modular Kotlin + Compose (`core/*`, `features/*`). Next implementation tasks: [docs/tickets/README.md](docs/tickets/README.md).
+Sunbeam: Android game-stream client (Moonlight lineage) for the official Sunshine server. Modular Kotlin + Compose architecture (`core/*`, `features/*`) with legacy streaming/input runtime in `:app`.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Sunbeam: Android game-stream client (Moonlight lineage) for the official Sunshin
 ## Conventions
 
 - New code is Kotlin. Don't add Java files. When you touch a Java file for more than a small fix, convert or extract the part you touch.
-- Don't grow `Game.java`, `ControllerHandler.java` or `StreamSettings.java`. Extract into a new class and call it from there.
+- Don't grow `Game.java` or `ControllerHandler.java`. Extract into a new class and call it from there.
 - Comments only for a non-obvious *why*. Don't restate the code. Keep existing comments you aren't changing.
 - No `printStackTrace`. Use `LimeLog` until the logging module exists, and don't log host names, addresses or pairing data.
 - Target official Sunshine only. Don't add Apollo-specific features, and remove the inherited ones when you touch that code.

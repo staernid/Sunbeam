@@ -4,9 +4,9 @@ Android game-stream client for [Sunshine](https://github.com/LizardByte/Sunshine
 
 Fork lineage: [moonlight-stream/moonlight-android](https://github.com/moonlight-stream/moonlight-android)
 → [ClassicOldSong/moonlight-android](https://github.com/ClassicOldSong/moonlight-android) (Artemis) → Sunbeam.
-Direction: a full redesign in Kotlin and Compose. See [docs/tickets/README.md](docs/tickets/README.md).
+Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 
-✅ = implemented today (inherited from the lineage, not yet re-audited) · ⬜ = planned
+✅ = implemented · ⬜ = planned
 
 ## Features
 
@@ -31,12 +31,12 @@ Direction: a full redesign in Kotlin and Compose. See [docs/tickets/README.md](d
 - ⬜ Xbox Series S/X USB driver init, F13-F24, PrtSc
 
 ### App
-- ✅ Host discovery (mDNS), manual add, PIN pairing, Wake-on-LAN
-- ✅ Per-host profiles
-- ⬜ Compose UI, Material 3, dynamic color
-- ⬜ Kotlin, coroutines, modular architecture
-- ⬜ Settings store on DataStore
-- ⬜ Unit and screenshot tests in CI
+- ✅ Host discovery (mDNS + coroutines), manual add, PIN pairing, Wake-on-LAN
+- ✅ Stream profiles, live Gamepad Tester, and On-Screen Control layout preview
+- ✅ Compose UI, Material 3, dynamic color, and OLED Black mode
+- ✅ Kotlin, coroutines, modular architecture (`core/*`, `features/*`), Metro DI, Coil 3
+- ✅ Settings store on DataStore (`kotlinx-serialization-json`)
+- ✅ Unit and Roborazzi screenshot tests in CI
 - ⬜ Up-to-date translations from upstream
 
 ## Build
