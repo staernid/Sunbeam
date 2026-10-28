@@ -23,92 +23,104 @@ fun interface MouseModeConsumer {
  * Coordinates game menu presentations, dialogs (mouse mode selection, session quit confirmation),
  * and routing between the primary screen and external displays.
  */
-class StreamMenuCoordinator(
-    private val isOnExternalDisplay: () -> Boolean,
-    private val getMenuCallbacks: () -> Game.GameMenuCallbacks?,
-) {
-    fun showGameMenu(device: GameInputDevice? = null) {
-        if (isOnExternalDisplay()) {
-            ExternalDisplayControlActivity.toggleGameMenu()
-        } else {
-            getMenuCallbacks()?.showMenu(device)
-        }
-    }
-
-    fun hideGameMenu() {
-        getMenuCallbacks()?.hideMenu()
-    }
-
-    fun isMenuOpen(): Boolean = getMenuCallbacks()?.isMenuOpen == true
-
-    fun showQuitConfirmDialog(
-        context: Context,
-        onConfirmQuit: Runnable,
+class StreamMenuCoordinator
+    @JvmOverloads
+    constructor(
+        private val isOnExternalDisplay: () -> Boolean,
+        private val getMenuCallbacks: () -> Game.GameMenuCallbacks?,
+        private val onShowComposeMenu: Runnable? = null,
+        private val onHideComposeMenu: Runnable? = null,
+        private val isComposeMenuOpen: (() -> Boolean)? = null,
     ) {
-        val targetContext =
-            if (isOnExternalDisplay() && ExternalDisplayControlActivity.instance != null) {
-                ExternalDisplayControlActivity.instance
+        fun showGameMenu(device: GameInputDevice? = null) {
+            if (isOnExternalDisplay()) {
+                ExternalDisplayControlActivity.toggleGameMenu()
+            } else if (onShowComposeMenu != null) {
+                onShowComposeMenu.run()
             } else {
-                context
-            }
-
-        AlertDialog.Builder(targetContext)
-            .setTitle(R.string.game_dialog_title_quit_confirm)
-            .setMessage(R.string.game_dialog_message_quit_confirm)
-            .setPositiveButton(targetContext.getString(R.string.yes)) { _, _ ->
-                onConfirmQuit.run()
-            }
-            .setNegativeButton(targetContext.getString(R.string.no)) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .create()
-            .show()
-    }
-
-    fun showSelectMouseModeDialog(
-        context: Context,
-        prefConfig: PreferenceConfiguration,
-        onApplyMouseMode: MouseModeConsumer,
-        onToggleLocalCursor: Runnable,
-    ) {
-        val allModes = context.resources.getStringArray(R.array.mouse_mode_names)
-        val allowedLabels =
-            setOf(
-                context.getString(R.string.mouse_mode_track_pad_natural),
-                context.getString(R.string.mouse_mode_track_pad_gaming),
-                context.getString(R.string.mouse_mode_disabled),
-            )
-
-        val options = mutableListOf<MouseModeOption>()
-        for (i in allModes.indices) {
-            val label = allModes[i]
-            val isAllowed = !isOnExternalDisplay() || allowedLabels.contains(label)
-            if (isAllowed) {
-                options.add(MouseModeOption(i, label))
+                getMenuCallbacks()?.showMenu(device)
             }
         }
-        options.add(MouseModeOption(-1, context.getString(R.string.toggle_local_mouse_cursor)))
 
-        val labels = Array(options.size) { options[it].label }
+        fun hideGameMenu() {
+            if (onHideComposeMenu != null) {
+                onHideComposeMenu.run()
+            } else {
+                getMenuCallbacks()?.hideMenu()
+            }
+        }
 
-        AlertDialog.Builder(context)
-            .setTitle(context.getString(R.string.game_menu_select_mouse_mode))
-            .setItems(labels) { dialog, which ->
-                dialog.dismiss()
-                val selected = options[which]
-                if (selected.index == -1) {
-                    onToggleLocalCursor.run()
+        fun isMenuOpen(): Boolean =
+            isComposeMenuOpen?.invoke() ?: (getMenuCallbacks()?.isMenuOpen == true)
+
+        fun showQuitConfirmDialog(
+            context: Context,
+            onConfirmQuit: Runnable,
+        ) {
+            val targetContext =
+                if (isOnExternalDisplay() && ExternalDisplayControlActivity.instance != null) {
+                    ExternalDisplayControlActivity.instance
                 } else {
-                    onApplyMouseMode.onMouseModeSelected(selected.index)
-                    if (prefConfig.rememberMouseMode) {
-                        ProfilesManager.getInstance().getOverlayingSharedPreferences(context)
-                            .edit()
-                            .putString("mouse_mode_list", selected.index.toString())
-                            .apply()
-                    }
+                    context
+                }
+
+            AlertDialog.Builder(targetContext)
+                .setTitle(R.string.game_dialog_title_quit_confirm)
+                .setMessage(R.string.game_dialog_message_quit_confirm)
+                .setPositiveButton(targetContext.getString(R.string.yes)) { _, _ ->
+                    onConfirmQuit.run()
+                }
+                .setNegativeButton(targetContext.getString(R.string.no)) { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .create()
+                .show()
+        }
+
+        fun showSelectMouseModeDialog(
+            context: Context,
+            prefConfig: PreferenceConfiguration,
+            onApplyMouseMode: MouseModeConsumer,
+            onToggleLocalCursor: Runnable,
+        ) {
+            val allModes = context.resources.getStringArray(R.array.mouse_mode_names)
+            val allowedLabels =
+                setOf(
+                    context.getString(R.string.mouse_mode_track_pad_natural),
+                    context.getString(R.string.mouse_mode_track_pad_gaming),
+                    context.getString(R.string.mouse_mode_disabled),
+                )
+
+            val options = mutableListOf<MouseModeOption>()
+            for (i in allModes.indices) {
+                val label = allModes[i]
+                val isAllowed = !isOnExternalDisplay() || allowedLabels.contains(label)
+                if (isAllowed) {
+                    options.add(MouseModeOption(i, label))
                 }
             }
-            .create()
-            .show()
+            options.add(MouseModeOption(-1, context.getString(R.string.toggle_local_mouse_cursor)))
+
+            val labels = Array(options.size) { options[it].label }
+
+            AlertDialog.Builder(context)
+                .setTitle(context.getString(R.string.game_menu_select_mouse_mode))
+                .setItems(labels) { dialog, which ->
+                    dialog.dismiss()
+                    val selected = options[which]
+                    if (selected.index == -1) {
+                        onToggleLocalCursor.run()
+                    } else {
+                        onApplyMouseMode.onMouseModeSelected(selected.index)
+                        if (prefConfig.rememberMouseMode) {
+                            ProfilesManager.getInstance().getOverlayingSharedPreferences(context)
+                                .edit()
+                                .putString("mouse_mode_list", selected.index.toString())
+                                .apply()
+                        }
+                    }
+                }
+                .create()
+                .show()
+        }
     }
-}

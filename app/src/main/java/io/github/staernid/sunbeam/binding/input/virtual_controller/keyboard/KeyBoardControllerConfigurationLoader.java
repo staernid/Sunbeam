@@ -14,8 +14,6 @@ import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.widget.Toast;
 
-import androidx.preference.PreferenceManager;
-
 import io.github.staernid.sunbeam.GameMenu;
 import io.github.staernid.sunbeam.LimeLog;
 import io.github.staernid.sunbeam.R;
@@ -551,7 +549,8 @@ public class KeyBoardControllerConfigurationLoader {
 
     public static void saveProfile(final KeyBoardController controller,
                                    final Context context) {
-        String name = PreferenceManager.getDefaultSharedPreferences(context).getString(OSC_PREFERENCE, OSC_PREFERENCE_VALUE);
+        SharedPreferences defaultPrefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        String name = defaultPrefs.getString(OSC_PREFERENCE, OSC_PREFERENCE_VALUE);
 
         SharedPreferences.Editor prefEditor = context.getSharedPreferences(name, Activity.MODE_PRIVATE).edit();
 
@@ -567,7 +566,8 @@ public class KeyBoardControllerConfigurationLoader {
     }
 
     public static void loadFromPreferences(final KeyBoardController controller, final Context context) {
-        String name = PreferenceManager.getDefaultSharedPreferences(context).getString(OSC_PREFERENCE, OSC_PREFERENCE_VALUE);
+        SharedPreferences defaultPrefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+        String name = defaultPrefs.getString(OSC_PREFERENCE, OSC_PREFERENCE_VALUE);
 
         SharedPreferences pref = context.getSharedPreferences(name, Activity.MODE_PRIVATE);
 

@@ -93,6 +93,11 @@ class SettingsViewModel(
         updateSetting { it.copy(deadzonePercentage = deadzone) }
     }
 
+    fun applyPreset(preset: StreamQualityPreset) {
+        if (preset == StreamQualityPreset.CUSTOM) return
+        updateSetting(preset::applyTo)
+    }
+
     fun updateSetting(transform: (StreamSettings) -> StreamSettings) {
         viewModelScope.launch(ioDispatcher) {
             preferencesRepository.updateSettings(transform)

@@ -51,6 +51,7 @@ import io.github.staernid.sunbeam.features.profiles.component.GamepadTesterView
 import io.github.staernid.sunbeam.features.profiles.component.OscPreviewView
 import io.github.staernid.sunbeam.features.profiles.component.ProfileCard
 import io.github.staernid.sunbeam.features.profiles.component.ProfileFormDialog
+import io.github.staernid.sunbeam.features.profiles.model.GamepadDebugState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +80,8 @@ fun ProfilesScreen(
     onOscScaleChange: (Float) -> Unit,
     onFeedbackMessageShown: () -> Unit,
     onNavigateBack: (() -> Unit)? = null,
+    onUpdateGamepadState: ((GamepadDebugState) -> GamepadDebugState) -> Unit = {},
+    onResetOscLayout: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -147,12 +150,14 @@ fun ProfilesScreen(
                     ProfilesTab.GAMEPAD_TESTER -> GamepadTesterView(
                         state = uiState.gamepadDebugState,
                         onTestRumble = onTestRumble,
+                        onUpdateGamepadState = onUpdateGamepadState,
                     )
                     ProfilesTab.OSC_PREVIEW -> OscPreviewView(
                         opacity = uiState.oscOpacity,
                         scale = uiState.oscScale,
                         onOpacityChange = onOscOpacityChange,
                         onScaleChange = onOscScaleChange,
+                        onResetLayout = onResetOscLayout,
                     )
                 }
             }

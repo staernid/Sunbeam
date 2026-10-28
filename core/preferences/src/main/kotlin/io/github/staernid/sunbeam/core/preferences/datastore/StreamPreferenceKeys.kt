@@ -72,4 +72,7 @@ object StreamPreferenceKeys {
     val CUSTOM_BITRATE = stringPreferencesKey("edit_diy_bitrate")
     val CUSTOM_REFRESH_RATE = stringPreferencesKey("custom_refresh_rate")
     val CUSTOM_RESOLUTION = stringPreferencesKey("edit_diy_w_h")
+    val LAST_SELECTED_HOST_UUID = stringPreferencesKey("last_selected_host_uuid")
+    val OLED_BLACK_MODE = booleanPreferencesKey("checkbox_oled_black_mode")
+    val DYNAMIC_COLOR = booleanPreferencesKey("checkbox_dynamic_color")
 }

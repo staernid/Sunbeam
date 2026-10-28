@@ -21,4 +21,9 @@ interface HostOperationsHandler {
         host: Host,
         pin: String,
     ): Result<Unit>
+
+    /**
+     * Sends a Wake-on-LAN magic packet to [host].
+     */
+    suspend fun wakeHost(host: Host): Result<Unit>
 }

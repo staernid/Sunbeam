@@ -16,6 +16,7 @@ import io.github.staernid.sunbeam.Game
 import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostApp
+import io.github.staernid.sunbeam.core.data.model.HostState
 import io.github.staernid.sunbeam.core.data.model.PairState
 import io.github.staernid.sunbeam.core.data.model.Profile
 import io.github.staernid.sunbeam.core.data.repository.AppRepository
@@ -54,19 +55,30 @@ class SunbeamAppTest {
             pairState = PairState.PAIRED,
         )
 
+    private val secondHost =
+        Host(
+            uuid = "host-2",
+            name = "Living Room PC",
+            localAddress = HostAddress("192.168.1.101"),
+            pairState = PairState.PAIRED,
+        )
+
     private val testApp =
         HostApp(
             id = 200,
             title = "Cyberpunk 2077",
         )
 
+    private var currentHosts: List<Host> = listOf(testHost)
+
     private val fakeHostRepo =
         object : HostRepository {
-            override val hostsFlow: Flow<List<Host>> = flowOf(listOf(testHost))
+            override val hostsFlow: Flow<List<Host>>
+                get() = flowOf(currentHosts)
 
-            override suspend fun getAllHosts(): List<Host> = listOf(testHost)
+            override suspend fun getAllHosts(): List<Host> = currentHosts
 
-            override suspend fun getHostByUuid(uuid: String): Host? = if (uuid == testHost.uuid) testHost else null
+            override suspend fun getHostByUuid(uuid: String): Host? = currentHosts.find { it.uuid == uuid }
 
             override suspend fun saveHost(host: Host) {}
 
@@ -135,7 +147,8 @@ class SunbeamAppTest {
     private val streamLauncher = StreamSessionLauncher(fakeHostRepo, fakeAppRepo, fakePrefsRepo, fakeProfileRepo)
 
     @Test
-    fun testTabSwitching() {
+    fun testTabSwitchingAndBackstackPreservation() {
+        currentHosts = listOf(testHost.copy(state = HostState.ONLINE))
         val navigator = SunbeamNavigator()
         val windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(400.dp, 800.dp))
 
@@ -157,6 +170,11 @@ class SunbeamAppTest {
         composeTestRule.onNodeWithText("Profiles").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
 
+        // Single paired online host auto-routes directly to AppsScreen on launch
+        composeTestRule.waitForIdle()
+        assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
+        composeTestRule.onNodeWithText("Desktop Rig").assertIsDisplayed()
+
         // Switch to Profiles tab
         composeTestRule.onNodeWithText("Profiles").performClick()
         assertEquals(TopLevelTab.PROFILES, navigator.currentTab)
@@ -166,10 +184,17 @@ class SunbeamAppTest {
         composeTestRule.onNodeWithText("Settings").performClick()
         assertEquals(TopLevelTab.SETTINGS, navigator.currentTab)
         assertEquals(SunbeamScreen.Settings, navigator.currentScreen)
+
+        // Switch back to Hosts tab — Apps("host-1") backstack entry is preserved
+        composeTestRule.onNodeWithText("Hosts").performClick()
+        assertEquals(TopLevelTab.HOSTS, navigator.currentTab)
+        assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
+        composeTestRule.onNodeWithText("Cyberpunk 2077").assertIsDisplayed()
     }
 
     @Test
     fun testHostToAppsToStreamNavigation() {
+        currentHosts = listOf(testHost, secondHost)
         val navigator = SunbeamNavigator()
         val windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(400.dp, 800.dp))
 
@@ -187,6 +212,9 @@ class SunbeamAppTest {
             }
         }
 
+        // With 2 online hosts and no lastSelectedHostUuid, starts on HostsScreen
+        assertEquals(SunbeamScreen.Hosts, navigator.currentScreen)
+
         // Click on the test host to navigate to AppsScreen
         composeTestRule.onNodeWithText("Desktop Rig").performClick()
         assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
@@ -199,6 +227,37 @@ class SunbeamAppTest {
         assertEquals(200, startedIntent.getIntExtra(Game.EXTRA_APP_ID, 0))
         assertEquals("Cyberpunk 2077", startedIntent.getStringExtra(Game.EXTRA_APP_NAME))
         assertEquals(SunbeamScreen.Apps("host-1"), navigator.currentScreen)
+    }
+
+    @Test
+    fun testHostSwitcherPillSwitchesHostAndNavigatesToManageHosts() {
+        currentHosts = listOf(testHost, secondHost)
+        val navigator = SunbeamNavigator(initialScreen = SunbeamScreen.Apps("host-1"))
+        val windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(400.dp, 800.dp))
+
+        composeTestRule.setContent {
+            SunbeamTheme {
+                SunbeamApp(
+                    windowSizeClass = windowSizeClass,
+                    hostRepository = fakeHostRepo,
+                    appRepository = fakeAppRepo,
+                    preferencesRepository = fakePrefsRepo,
+                    profileRepository = fakeProfileRepo,
+                    streamLauncher = streamLauncher,
+                    navigator = navigator,
+                )
+            }
+        }
+
+        // Open Host Switcher menu in AppsTopBar and switch to Living Room PC
+        composeTestRule.onNodeWithText("Desktop Rig").performClick()
+        composeTestRule.onNodeWithText("Living Room PC").performClick()
+        assertEquals(SunbeamScreen.Apps("host-2"), navigator.currentScreen)
+
+        // Open Host Switcher menu again and tap Manage All Hosts
+        composeTestRule.onNodeWithText("Living Room PC").performClick()
+        composeTestRule.onNodeWithText("Manage All Hosts").performClick()
+        assertEquals(SunbeamScreen.Hosts, navigator.currentScreen)
     }
 
     @Test
@@ -226,5 +285,6 @@ class SunbeamAppTest {
         assertNotNull(startedIntent)
         assertEquals(Game::class.java.name, startedIntent.component?.className)
         assertEquals(200, startedIntent.getIntExtra(Game.EXTRA_APP_ID, 0))
+        assertEquals(SunbeamScreen.Hosts, navigator.currentScreen)
     }
 }

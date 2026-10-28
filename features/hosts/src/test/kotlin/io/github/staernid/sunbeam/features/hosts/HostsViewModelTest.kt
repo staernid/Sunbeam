@@ -4,6 +4,7 @@ import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostState
 import io.github.staernid.sunbeam.core.data.model.PairState
+import io.github.staernid.sunbeam.core.data.repository.HostOperationsHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -115,6 +116,66 @@ class HostsViewModelTest {
         val dialog = viewModel.uiState.value.dialogState
         assertTrue(dialog is HostsDialogState.HostDetails)
         assertEquals(sampleHost.uuid, (dialog as HostsDialogState.HostDetails).host.uuid)
+    }
+
+    @Test
+    fun `onHelpClicked sets dialog state to Help`() = runTest(testDispatcher) {
+        viewModel.onHelpClicked()
+        assertEquals(HostsDialogState.Help, viewModel.uiState.value.dialogState)
+    }
+
+    @Test
+    fun `onWakeHostClicked sends Wake-on-LAN and notifies user on success`() = runTest(testDispatcher) {
+        var wokeHost: Host? = null
+        val handler = object : HostOperationsHandler {
+            override suspend fun addHost(
+                address: String,
+                name: String,
+            ): Result<Host> = Result.failure(NotImplementedError())
+
+            override suspend fun pairHost(
+                host: Host,
+                pin: String,
+            ): Result<Unit> = Result.success(Unit)
+
+            override suspend fun wakeHost(host: Host): Result<Unit> {
+                wokeHost = host
+                return Result.success(Unit)
+            }
+        }
+        val vm = HostsViewModel(fakeRepository, handler)
+        advanceUntilIdle()
+
+        vm.onWakeHostClicked(sampleHost)
+        advanceUntilIdle()
+
+        assertEquals(sampleHost, wokeHost)
+        assertEquals("Wake-on-LAN packet sent to ${sampleHost.name}", vm.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `onWakeHostClicked shows error message when wakeHost fails`() = runTest(testDispatcher) {
+        val handler = object : HostOperationsHandler {
+            override suspend fun addHost(
+                address: String,
+                name: String,
+            ): Result<Host> = Result.failure(NotImplementedError())
+
+            override suspend fun pairHost(
+                host: Host,
+                pin: String,
+            ): Result<Unit> = Result.success(Unit)
+
+            override suspend fun wakeHost(host: Host): Result<Unit> =
+                Result.failure(Exception("Network unreachable"))
+        }
+        val vm = HostsViewModel(fakeRepository, handler)
+        advanceUntilIdle()
+
+        vm.onWakeHostClicked(sampleHost)
+        advanceUntilIdle()
+
+        assertEquals("Network unreachable", vm.uiState.value.userMessage)
     }
 
     @Test

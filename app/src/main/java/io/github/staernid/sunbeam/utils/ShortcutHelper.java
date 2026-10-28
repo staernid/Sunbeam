@@ -107,6 +107,10 @@ public class ShortcutHelper {
         tvChannelHelper.addGameToChannel(computer, app);
     }
 
+    public void createHostShortcut(ComputerDetails computer, boolean forceAdd, boolean newlyPaired) {
+        createAppViewShortcut(computer, forceAdd, newlyPaired);
+    }
+
     public void createAppViewShortcut(ComputerDetails computer, boolean forceAdd, boolean newlyPaired) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             ShortcutInfo sinfo = new ShortcutInfo.Builder(context, computer.uuid)

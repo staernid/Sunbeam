@@ -1,32 +1,55 @@
-@file:Suppress("MagicNumber", "LongMethod")
+@file:Suppress(
+    "MagicNumber",
+    "LongMethod",
+    "LongParameterList",
+    "UnusedParameter",
+)
 
 package io.github.staernid.sunbeam.features.stream.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardCommandKey
-import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,11 +60,343 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
+import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
 import io.github.staernid.sunbeam.features.stream.model.StreamMouseMode
 import io.github.staernid.sunbeam.features.stream.model.StreamShortcut
 
 /**
- * Main in-stream quick control menu.
+ * Slide-in edge drawer providing in-stream controls, quick toggles, inline mouse mode,
+ * and shortcut dispatch.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun StreamControlDrawer(
+    isPanZoomMode: Boolean,
+    isVirtualControllerEnabled: Boolean,
+    perfOverlayMode: PerfOverlayMode,
+    selectedMouseMode: StreamMouseMode,
+    shortcuts: List<StreamShortcut>,
+    onDisconnect: () -> Unit,
+    onOpenQuitConfirm: () -> Unit,
+    onToggleKeyboard: () -> Unit,
+    onToggleZoomMode: () -> Unit,
+    onSelectMouseMode: (StreamMouseMode) -> Unit,
+    onSendShortcut: (StreamShortcut) -> Unit,
+    onTogglePerfHud: () -> Unit,
+    onToggleVirtualController: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("stream_control_drawer_container"),
+    ) {
+        // Scrim backdrop
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(onClick = onDismiss)
+                .testTag("stream_drawer_scrim"),
+        )
+
+        // Slide-in drawer
+        Surface(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .fillMaxWidth(0.85f)
+                .widthIn(max = 360.dp)
+                .testTag("stream_control_drawer"),
+            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Header: Title & Close Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Stream Controls",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        )
+                        Text(
+                            text = "Active Session",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .sunbeamFocusable()
+                            .testTag("close_drawer_button"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Controls",
+                        )
+                    }
+                }
+
+                // Quick Actions: Disconnect & Quit
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onDisconnect,
+                        modifier = Modifier
+                            .weight(1f)
+                            .sunbeamFocusable()
+                            .testTag("drawer_disconnect_button"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(text = "Disconnect", maxLines = 1)
+                    }
+                    Button(
+                        onClick = onOpenQuitConfirm,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .sunbeamFocusable()
+                            .testTag("drawer_quit_button"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(text = "Quit Session", maxLines = 1)
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Quick Toggles
+                Text(
+                    text = "Quick Toggles",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DrawerQuickToggle(
+                        icon = Icons.Default.Gamepad,
+                        title = "Virtual Controller",
+                        active = isVirtualControllerEnabled,
+                        onClick = onToggleVirtualController,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("stream_toggle_virtual_controller"),
+                    )
+                    DrawerQuickToggle(
+                        icon = if (isPanZoomMode) Icons.Default.ZoomOut else Icons.Default.ZoomIn,
+                        title = if (isPanZoomMode) "Exit Zoom" else "Pan / Zoom",
+                        active = isPanZoomMode,
+                        onClick = onToggleZoomMode,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("stream_toggle_zoom"),
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    DrawerQuickToggle(
+                        icon = Icons.Default.Keyboard,
+                        title = "Keyboard",
+                        active = false,
+                        onClick = onToggleKeyboard,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("stream_toggle_keyboard"),
+                    )
+                    DrawerQuickToggle(
+                        icon = Icons.Default.Speed,
+                        title = "HUD: ${perfOverlayMode.name}",
+                        active = perfOverlayMode != PerfOverlayMode.NONE,
+                        onClick = onTogglePerfHud,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("stream_toggle_hud"),
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Inline Mouse Mode
+                Text(
+                    text = "Mouse Mode",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    StreamMouseMode.entries.forEach { mode ->
+                        val isSelected = mode == selectedMouseMode
+                        Surface(
+                            onClick = { onSelectMouseMode(mode) },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            } else {
+                                Color.Transparent
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sunbeamFocusable(shape = RoundedCornerShape(12.dp)),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onSelectMouseMode(mode) },
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = mode.title,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                    )
+                                    Text(
+                                        text = mode.description,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Special Keys & Shortcuts
+                Text(
+                    text = "Special Keys & Shortcuts",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    shortcuts.forEach { shortcut ->
+                        AssistChip(
+                            onClick = { onSendShortcut(shortcut) },
+                            label = {
+                                Text(
+                                    text = shortcut.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardCommandKey,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            },
+                            modifier = Modifier
+                                .sunbeamFocusable()
+                                .testTag("shortcut_${shortcut.id}"),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerQuickToggle(
+    icon: ImageVector,
+    title: String,
+    active: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = if (active) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        },
+        contentColor = if (active) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        modifier = modifier.sunbeamFocusable(shape = RoundedCornerShape(12.dp)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/**
+ * Backward-compatible wrapper delegating to [StreamControlDrawer].
  */
 @Composable
 fun StreamMenuDialog(
@@ -58,122 +413,23 @@ fun StreamMenuDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Stream Controls",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                StreamMenuItem(
-                    icon = Icons.AutoMirrored.Filled.ExitToApp,
-                    title = "Disconnect",
-                    subtitle = "Leave stream running on host",
-                    onClick = onDisconnect,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.PowerSettingsNew,
-                    title = "Quit Session",
-                    subtitle = "Terminate active game on host",
-                    iconTint = MaterialTheme.colorScheme.error,
-                    titleColor = MaterialTheme.colorScheme.error,
-                    onClick = onOpenQuitConfirm,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.Keyboard,
-                    title = "On-Screen Keyboard",
-                    subtitle = "Toggle software text input",
-                    onClick = onToggleKeyboard,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.ZoomIn,
-                    title = if (isPanZoomMode) "Disable Pan / Zoom" else "Enable Pan / Zoom",
-                    subtitle = "Pan and scale the video stream",
-                    onClick = onToggleZoomMode,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.Mouse,
-                    title = "Mouse Mode",
-                    subtitle = "Trackpad, gaming, or direct input",
-                    onClick = onOpenMouseModePicker,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.KeyboardCommandKey,
-                    title = "Send Special Keys",
-                    subtitle = "Esc, Alt+F4, Win+D, Task Manager",
-                    onClick = onOpenSpecialKeysPicker,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.Speed,
-                    title = "Performance HUD",
-                    subtitle = "Cycle off, compact, or expanded stats",
-                    onClick = onTogglePerfHud,
-                )
-                StreamMenuItem(
-                    icon = Icons.Default.Gamepad,
-                    title = if (isVirtualControllerEnabled) "Hide Virtual Controls" else "Show Virtual Controls",
-                    subtitle = "On-screen touch gamepad overlay",
-                    onClick = onToggleVirtualController,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Close")
-            }
-        },
-        modifier = modifier.testTag("stream_menu_dialog"),
+    StreamControlDrawer(
+        isPanZoomMode = isPanZoomMode,
+        isVirtualControllerEnabled = isVirtualControllerEnabled,
+        perfOverlayMode = PerfOverlayMode.LITE,
+        selectedMouseMode = StreamMouseMode.TRACKPAD_NATURAL,
+        shortcuts = StreamShortcut.defaultShortcuts,
+        onDisconnect = onDisconnect,
+        onOpenQuitConfirm = onOpenQuitConfirm,
+        onToggleKeyboard = onToggleKeyboard,
+        onToggleZoomMode = onToggleZoomMode,
+        onSelectMouseMode = {},
+        onSendShortcut = {},
+        onTogglePerfHud = onTogglePerfHud,
+        onToggleVirtualController = onToggleVirtualController,
+        onDismiss = onDismiss,
+        modifier = modifier,
     )
-}
-
-@Composable
-private fun StreamMenuItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
-    titleColor: Color = MaterialTheme.colorScheme.onSurface,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = titleColor,
-                ),
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        }
-    }
 }
 
 /**
@@ -227,7 +483,7 @@ fun StreamMouseModeDialog(
         title = { Text(text = "Select Mouse Mode") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StreamMouseMode.values().forEach { mode ->
+                StreamMouseMode.entries.forEach { mode ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

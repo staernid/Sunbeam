@@ -12,6 +12,8 @@ sealed interface HostsDialogState {
     data class HostDetails(val host: Host) : HostsDialogState
 
     data class DeleteConfirm(val host: Host) : HostsDialogState
+
+    data object Help : HostsDialogState
 }
 
 data class HostsUiState(

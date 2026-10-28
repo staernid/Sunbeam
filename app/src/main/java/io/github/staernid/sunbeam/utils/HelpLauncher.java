@@ -1,11 +1,11 @@
 package io.github.staernid.sunbeam.utils;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 
-import io.github.staernid.sunbeam.HelpActivity;
+import io.github.staernid.sunbeam.LimeLog;
 
 public class HelpLauncher {
     public static void launchUrl(Context context, String url) {
@@ -21,28 +21,13 @@ public class HelpLauncher {
         try {
             Intent i = new Intent(Intent.ACTION_VIEW);
             i.setData(Uri.parse(url));
-
-            // Several Android TV devices will lie and say they do have a browser even though the OS
-            // just shows an error dialog if we try to use it. We used to try to be clever and check
-            // the package name of the resolved intent, but it's not worth it anymore with Android 11's
-            // package visibility changes. We'll just always use the WebView on Android TV.
-            if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
-                context.startActivity(i);
-                return;
+            if (!(context instanceof Activity)) {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             }
+            context.startActivity(i);
         } catch (Exception e) {
-            // This is only supposed to throw ActivityNotFoundException but
-            // it can (at least) also throw SecurityException if a user's default
-            // browser is not exported. We'll catch everything to workaround this.
-
-            // Fall through
+            LimeLog.warning("Unable to launch browser for " + url + ": " + e.getMessage());
         }
-
-        // This platform has no browser (possibly a leanback device)
-        // We'll launch our WebView activity
-        Intent i = new Intent(context, HelpActivity.class);
-        i.setData(Uri.parse(url));
-        context.startActivity(i);
     }
 
     public static void launchSetupGuide(Context context) {

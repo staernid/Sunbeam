@@ -239,7 +239,6 @@ public class PreferenceConfiguration {
     public boolean enforceDisplayMode, enableSops, playHostAudio, disableWarnings, fullScreen;
     public ScaleMode videoScaleMode;
     public String language;
-    public int renderMode;
     public boolean smallIconMode, multiController, usbDriver, flipFaceButtons;
     public boolean onscreenController;
     public boolean hideOSCWhenHasGamepad;
@@ -255,10 +254,6 @@ public class PreferenceConfiguration {
     public boolean enableHdr;
     public boolean enablePip;
 
-    public float parallax_depth;
-
-    public float convergence_ratio;
-    public float balance_shift;
     public boolean enablePerfOverlay;
     public boolean enablePerfLogging;
     //简化版性能信息
@@ -374,10 +369,6 @@ public class PreferenceConfiguration {
     private static final String CHECKBOX_REMEMBER_ZOOM_PAN = "checkbox_remember_zoom_pan";
     private static final String NUMBER_ZOOM_SCALE = "number_zoom_scale";
 
-    private static final String PARALLAX_DEPTH = "parallax_depth";
-
-    private static final String CONVERGENCE_RATIO = "convergence_ratio";
-    private static final String BALANCE_SHIFT = "balance_shift";
     private static final String NUMBER_PAN_OFFSET_X = "number_pan_offset_x";
     private static final String NUMBER_PAN_OFFSET_Y = "number_pan_offset_y";
 
@@ -685,12 +676,6 @@ private static int getFramePacingValue(Context context) {
                 .apply();
     }
 
-//    public static void completeLanguagePreferenceMigration(Context context) {
-//        // Put our language option back to default which tells us that we've already migrated it
-//        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-//        prefs.edit().putString(LANGUAGE_PREF_STRING, DEFAULT_LANGUAGE).apply();
-//    }
-
     public static boolean isShieldAtvFirmwareWithBrokenHdr() {
         // This particular Shield TV firmware crashes when using HDR
         // https://www.nvidia.com/en-us/geforce/forums/notifications/comment/155192/
@@ -875,10 +860,6 @@ private static int getFramePacingValue(Context context) {
         config.usbDriver = prefs.getBoolean(USB_DRIVER_PREF_SRING, DEFAULT_USB_DRIVER);
         config.fullScreen = prefs.getBoolean(FULL_SCREEN_PREF_STRING, DEFAULT_FULL_SCREEN);
 
-        String renderMode = prefs.getString("render_mode_list", "0");
-        int renderModeInt = Integer.parseInt(renderMode);
-        config.renderMode = renderModeInt;
-
         // Read mouse mode and set touch settings accordingly
         String mouseMode = prefs.getString("mouse_mode_list", "0");
         int mouseModeInt = Integer.parseInt(mouseMode);
@@ -1016,10 +997,6 @@ private static int getFramePacingValue(Context context) {
         config.zoomScale = prefs.getFloat(NUMBER_ZOOM_SCALE, DEFAULT_ZOOM_SCALE);
         config.panOffsetX = prefs.getFloat(NUMBER_PAN_OFFSET_X, DEFAULT_PAN_OFFSET);
         config.panOffsetY = prefs.getFloat(NUMBER_PAN_OFFSET_Y, DEFAULT_PAN_OFFSET);
-
-        config.parallax_depth = prefs.getInt(PARALLAX_DEPTH, 50) / 100f;
-        config.convergence_ratio = prefs.getInt(CONVERGENCE_RATIO, 50) / 100f;
-        config.balance_shift = prefs.getInt(BALANCE_SHIFT, 50) / 100f;
 
         return config;
     }

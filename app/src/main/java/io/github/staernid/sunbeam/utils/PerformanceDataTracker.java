@@ -2,7 +2,6 @@ package io.github.staernid.sunbeam.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -69,7 +68,7 @@ public class PerformanceDataTracker {
             newEntry.put(FIELD_FRAME_PACING, framePacing);
             newEntry.put(FIELD_DATETIME, dateTime);
 
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            SharedPreferences prefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
             String existingLogsRaw = prefs.getString(PREF_KEY_LOG, "");
 
             JSONArray logsArray;
@@ -135,12 +134,12 @@ public class PerformanceDataTracker {
     }
 
     public String getLog(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences prefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
         return prefs.getString(PREF_KEY_LOG, "");
     }
 
     public void clearLogs(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences prefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
         prefs.edit().remove(PREF_KEY_LOG).apply();
         Log.d("PerformanceDataTracker", "All logs cleared.");
     }

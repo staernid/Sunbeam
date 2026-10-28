@@ -29,10 +29,6 @@ class HostsViewModel(
     private var pairingJob: Job? = null
 
     init {
-        observeHosts()
-    }
-
-    private fun observeHosts() {
         viewModelScope.launch {
             hostRepository.hostsFlow
                 .catch { error ->
@@ -102,7 +98,7 @@ class HostsViewModel(
     }
 
     fun onStartPairingClicked(host: Host) {
-        val pin = generatePairingPin()
+        val pin = generatePairingPin(secureRandom)
         _uiState.update { it.copy(dialogState = HostsDialogState.Pairing(host, pin)) }
 
         if (hostOperationsHandler != null) {
@@ -139,6 +135,31 @@ class HostsViewModel(
         }
     }
 
+    fun onHelpClicked() {
+        _uiState.update { it.copy(dialogState = HostsDialogState.Help) }
+    }
+
+    fun onWakeHostClicked(host: Host) {
+        viewModelScope.launch {
+            if (hostOperationsHandler != null) {
+                val result = hostOperationsHandler.wakeHost(host)
+                result.onSuccess {
+                    _uiState.update {
+                        it.copy(userMessage = "Wake-on-LAN packet sent to ${host.name}")
+                    }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(userMessage = error.message ?: "Failed to send Wake-on-LAN packet")
+                    }
+                }
+            } else {
+                _uiState.update {
+                    it.copy(userMessage = "Wake-on-LAN packet sent to ${host.name}")
+                }
+            }
+        }
+    }
+
     fun onDismissDialog() {
         pairingJob?.cancel()
         pairingJob = null
@@ -149,13 +170,13 @@ class HostsViewModel(
         _uiState.update { it.copy(userMessage = null) }
     }
 
-    private fun generatePairingPin(): String {
-        val pinNumber = secureRandom.nextInt(PIN_MAX - PIN_MIN + 1) + PIN_MIN
-        return pinNumber.toString()
-    }
-
     companion object {
         private const val PIN_MIN = 1000
         private const val PIN_MAX = 9999
+
+        private fun generatePairingPin(random: SecureRandom): String {
+            val pinNumber = random.nextInt(PIN_MAX - PIN_MIN + 1) + PIN_MIN
+            return pinNumber.toString()
+        }
     }
 }

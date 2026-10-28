@@ -1,14 +1,13 @@
 # AGENTS.md
 
-Sunbeam: Android game-stream client (Moonlight lineage) for the official Sunshine server. Currently a Java codebase in one `:app`
-module, moving to a modular Kotlin + Compose app. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+Sunbeam: Android game-stream client (Moonlight lineage) for the official Sunshine server. Moving from legacy Java in `:app` to modular Kotlin + Compose (`core/*`, `features/*`). Next implementation tasks: [docs/tickets/README.md](docs/tickets/README.md).
 
 ## Commands
 
 - Build: `./gradlew :app:assembleDebug`
-- Unit tests (JVM/Robolectric): `./gradlew :app:testDebugUnitTest`. See [android_test_setup.md](android_test_setup.md).
+- Unit tests (JVM/Robolectric): `./gradlew testDebugUnitTest`. See [android_test_setup.md](android_test_setup.md).
 - Native code lives in `core/native/src/main/jni/moonlight-core` (submodules). Run `git submodule update --init --recursive` first.
-- Lint & Code Health: `./gradlew :app:lintDebug :app:ktlintCheck :app:detekt`
+- Lint & Code Health: `./gradlew lintDebug ktlintCheck detekt`
 
 ## Git
 

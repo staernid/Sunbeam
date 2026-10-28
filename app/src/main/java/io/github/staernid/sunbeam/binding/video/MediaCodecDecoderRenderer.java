@@ -19,7 +19,6 @@ import io.github.staernid.sunbeam.R;
 import io.github.staernid.sunbeam.nvstream.av.video.VideoDecoderRenderer;
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge;
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration;
-import io.github.staernid.sunbeam.utils.Stereo3DRenderer;
 import io.github.staernid.sunbeam.utils.TrafficStatsHelper;
 
 import android.annotation.SuppressLint;
@@ -1709,36 +1708,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
                     sb.append(context.getString(R.string.perf_overlay_lite_netdrops,(float)lastTwo.framesLost / lastTwo.totalFrames * 100));
                     sb.append("\t FPS：");
                     sb.append(context.getString(R.string.perf_overlay_lite_fps, fps.totalFps));
-                    if(Stereo3DRenderer.isActive) {
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_ai_fps));
-                        sb.append(" ");
-                        sb.append(Stereo3DRenderer.threeDFps);
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_ai_delegate));
-                        sb.append(" ");
-                        sb.append(Stereo3DRenderer.renderer);
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_drawdelay, Stereo3DRenderer.drawDelay));
-                    }
                 }else{
-                    if(Stereo3DRenderer.isActive) {
-                        sb.append(context.getString(R.string.perf_overlay_streamdetails, initialWidth + "x" + initialHeight, fps.totalFps));
-                        sb.append('\n');
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_ai_fps));
-                        sb.append(" ");
-                        sb.append(Stereo3DRenderer.threeDFps);
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_ai_delegate));
-                        sb.append(" ");
-                        sb.append(Stereo3DRenderer.renderer);
-                        sb.append(" ");
-                        sb.append(context.getString(R.string.perf_overlay_drawdelay, Stereo3DRenderer.drawDelay));
-                    } else {
-                        // If GPU renders the frames, the render FPS is the actual drawn and visible fps for the user
-                        sb.append(context.getString(R.string.perf_overlay_streamdetails, initialWidth + "x" + initialHeight, fps.totalFps));
-                    }
+                    sb.append(context.getString(R.string.perf_overlay_streamdetails, initialWidth + "x" + initialHeight, fps.totalFps));
                     sb.append('\n');
                     sb.append(context.getString(R.string.perf_overlay_decoder, decoder)).append('\n');
                     // Add the video enhancement line if SR is enabled

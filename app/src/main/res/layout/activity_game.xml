@@ -116,4 +116,9 @@
         android:visibility="gone"
         android:elevation="9999dp" />
 
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/streamComposeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </merge>

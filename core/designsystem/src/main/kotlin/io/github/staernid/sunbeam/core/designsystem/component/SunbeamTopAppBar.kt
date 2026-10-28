@@ -14,6 +14,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +54,7 @@ fun SunbeamBackNavigationIcon(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.sunbeamFocusable(),
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,

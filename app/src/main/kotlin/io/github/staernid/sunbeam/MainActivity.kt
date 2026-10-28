@@ -6,74 +6,57 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import io.github.staernid.sunbeam.core.data.repository.CachedAppRepository
+import dev.zacsweers.metro.Inject
 import io.github.staernid.sunbeam.core.data.repository.JsonProfileRepository
 import io.github.staernid.sunbeam.core.data.repository.SqliteHostRepository
 import io.github.staernid.sunbeam.core.designsystem.theme.SunbeamTheme
-import io.github.staernid.sunbeam.core.preferences.DataStorePreferencesRepository
-import io.github.staernid.sunbeam.core.stream.NvStreamSession
-import io.github.staernid.sunbeam.data.NvAppNetworkDataSource
-import io.github.staernid.sunbeam.discovery.ComputerManagerBridge
+import io.github.staernid.sunbeam.core.preferences.PreferencesRepository
+import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
+import io.github.staernid.sunbeam.discovery.HostDiscoveryManager
 import io.github.staernid.sunbeam.ui.SunbeamApp
-import io.github.staernid.sunbeam.ui.stream.StreamSessionLauncher
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * Modern Compose-based root activity linking all Sunbeam features and streaming session launcher.
  */
 class MainActivity : ComponentActivity() {
-    private val hostRepository by lazy { SqliteHostRepository(this) }
-    private val profileRepository by lazy {
-        JsonProfileRepository(File(filesDir, "profiles/profiles.json"))
-    }
-    private val preferencesRepository by lazy { DataStorePreferencesRepository.create(this) }
-    private val appRepository by lazy {
-        CachedAppRepository(
-            context = this,
-            networkDataSource = NvAppNetworkDataSource(this),
-        )
-    }
-    private val streamLauncher by lazy {
-        StreamSessionLauncher(
-            hostRepository = hostRepository,
-            appRepository = appRepository,
-            preferencesRepository = preferencesRepository,
-            profileRepository = profileRepository,
-        )
-    }
-    private val streamSession by lazy { NvStreamSession() }
-    private val computerBridge by lazy {
-        ComputerManagerBridge(
-            context = this,
-            hostRepository = hostRepository,
-            scope = lifecycleScope,
-        )
-    }
+    @Inject
+    lateinit var sqliteHostRepository: SqliteHostRepository
+
+    @Inject
+    lateinit var jsonProfileRepository: JsonProfileRepository
+
+    @Inject
+    lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
+    lateinit var hostDiscoveryManager: HostDiscoveryManager
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        (application as SunbeamApplication).appGraph.inject(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
-            hostRepository.initialize()
-            profileRepository.initialize()
+            sqliteHostRepository.initialize()
+            jsonProfileRepository.initialize()
         }
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
-            SunbeamTheme {
+            val settings by preferencesRepository.settingsFlow.collectAsStateWithLifecycle(
+                initialValue = StreamSettings(),
+            )
+            SunbeamTheme(
+                dynamicColor = settings.dynamicColor,
+                oledBlack = settings.oledBlackMode,
+            ) {
                 SunbeamApp(
                     windowSizeClass = windowSizeClass,
-                    hostRepository = hostRepository,
-                    appRepository = appRepository,
-                    preferencesRepository = preferencesRepository,
-                    profileRepository = profileRepository,
-                    streamLauncher = streamLauncher,
-                    streamSession = streamSession,
-                    hostOperationsHandler = computerBridge,
                 )
             }
         }
@@ -81,16 +64,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        computerBridge.start()
+        hostDiscoveryManager.start()
     }
 
     override fun onStop() {
         super.onStop()
-        computerBridge.stop()
+        hostDiscoveryManager.stop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        computerBridge.destroy()
+        hostDiscoveryManager.destroy()
     }
 }

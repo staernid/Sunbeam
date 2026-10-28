@@ -1,5 +1,6 @@
 plugins {
     id("sunbeam.android.library")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -10,7 +11,7 @@ dependencies {
     api(project(":core:preferences"))
     implementation(project(":core:native"))
 
-    implementation(libs.gson)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.annotation)

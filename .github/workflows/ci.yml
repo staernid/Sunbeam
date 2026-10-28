@@ -33,13 +33,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run Code Health Checks (ktlint & detekt)
-        run: ./gradlew :app:ktlintCheck :app:detekt
+        run: ./gradlew ktlintCheck detekt
 
       - name: Run Lint
-        run: ./gradlew :app:lintDebug
+        run: ./gradlew lintDebug
 
       - name: Run Unit Tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Assemble Debug APK
         run: ./gradlew :app:assembleDebug
@@ -49,4 +49,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: app/build/reports/
+          path: "**/build/reports/"

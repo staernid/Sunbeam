@@ -8,4 +8,5 @@ dependencies {
     implementation(libs.compose.compiler.gradlePlugin)
     implementation(libs.detekt.gradlePlugin)
     implementation(libs.ktlint.gradlePlugin)
+    implementation(libs.roborazzi.gradlePlugin)
 }

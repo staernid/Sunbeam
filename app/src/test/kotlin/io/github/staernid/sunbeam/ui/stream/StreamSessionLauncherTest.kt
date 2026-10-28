@@ -16,8 +16,10 @@ import io.github.staernid.sunbeam.core.preferences.PreferencesRepository
 import io.github.staernid.sunbeam.core.preferences.models.AudioConfiguration
 import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
 import io.github.staernid.sunbeam.core.preferences.models.VideoFormatOption
+import io.github.staernid.sunbeam.core.preferences.models.VideoScaleMode
 import io.github.staernid.sunbeam.core.stream.model.AudioChannelConfiguration
 import io.github.staernid.sunbeam.core.stream.model.VideoFormat
+import io.github.staernid.sunbeam.preferences.PreferenceConfiguration
 import io.github.staernid.sunbeam.stream.StreamIntentParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -100,6 +102,10 @@ class StreamSessionLauncherTest {
                     audioConfig = AudioConfiguration.SURROUND_51,
                     videoFormat = VideoFormatOption.FORCE_AV1,
                     enableHdr = true,
+                    videoSuperResolution = true,
+                    flipFaceButtons = true,
+                    enablePerfOverlay = true,
+                    deadzonePercentage = 15,
                 )
             override val settingsFlow: Flow<StreamSettings> = flowOf(current)
 
@@ -166,6 +172,9 @@ class StreamSessionLauncherTest {
                     "height" to 720,
                     "fps" to 60,
                     "bitrate_kbps" to 10_000,
+                    "stretch" to true,
+                    "osc_enabled" to true,
+                    "osc_opacity" to 0.6f,
                 ),
             )
         activeProfileFlow.value = overrideProfile
@@ -180,6 +189,11 @@ class StreamSessionLauncherTest {
         assertEquals(720, config.height)
         assertEquals(60, config.fps)
         assertEquals(10_000, config.bitrateKbps)
+
+        val effectiveSettings = launcher.resolveEffectiveSettings()
+        assertEquals(VideoScaleMode.STRETCH, effectiveSettings.videoScaleMode)
+        assertTrue(effectiveSettings.onscreenController)
+        assertEquals(60, effectiveSettings.oscOpacity)
     }
 
     @Test
@@ -205,14 +219,24 @@ class StreamSessionLauncherTest {
     }
 
     @Test
-    fun testCreateGameActivityIntent_withStreamConfig_populatesStreamExtras() = runTest {
+    fun testCreateGameActivityIntent_withSettings_bridgesToPreferenceConfiguration() = runTest {
         val launcher = StreamSessionLauncher(fakeHostRepo, fakeAppRepo, fakePrefsRepo, fakeProfileRepo)
+        val settings = launcher.resolveEffectiveSettings()
         val config = launcher.resolveStreamConfig(testHost.uuid, testApp.id).getOrThrow()
-        val intent = launcher.createGameActivityIntent(context, testHost, testApp, config)
+        val intent = launcher.createGameActivityIntent(context, testHost, testApp, config, settings)
 
-        assertEquals(2560, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_WIDTH, 0))
-        assertEquals(1440, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_HEIGHT, 0))
-        assertEquals(120, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_FPS, 0))
-        assertEquals(50_000, intent.getIntExtra(StreamIntentParser.EXTRA_STREAM_BITRATE, 0))
+        val prefConfig = PreferenceConfiguration()
+        StreamIntentParser.applyStreamExtras(intent, prefConfig)
+
+        assertEquals(2560, prefConfig.width)
+        assertEquals(1440, prefConfig.height)
+        assertEquals(120f, prefConfig.fps, 0.01f)
+        assertEquals(50_000, prefConfig.bitrate)
+        assertTrue(prefConfig.enableHdr)
+        assertTrue(prefConfig.videoSr)
+        assertTrue(prefConfig.flipFaceButtons)
+        assertTrue(prefConfig.enablePerfOverlay)
+        assertEquals(15, prefConfig.deadzonePercentage)
+        assertEquals(PreferenceConfiguration.FormatOption.FORCE_AV1, prefConfig.videoFormat)
     }
 }

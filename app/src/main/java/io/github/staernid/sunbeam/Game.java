@@ -42,6 +42,8 @@ import io.github.staernid.sunbeam.nvstream.input.MouseButtonPacket;
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge;
 import io.github.staernid.sunbeam.preferences.GlPreferences;
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration;
+import androidx.compose.ui.platform.ComposeView;
+import io.github.staernid.sunbeam.features.stream.StreamViewModel;
 import io.github.staernid.sunbeam.profiles.ProfilesManager;
 import io.github.staernid.sunbeam.ui.ExternalControllerView;
 import io.github.staernid.sunbeam.ui.GameGestures;
@@ -114,7 +116,6 @@ import android.widget.ImageButton;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.preference.PreferenceManager;
 
 import android.os.Looper;
 import java.nio.charset.StandardCharsets;
@@ -331,7 +332,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                 && onExternelDisplay
-                && prefConfig.renderMode == 0 // For 3D we want to maintain configured resolution
         ) {
             Display.Mode currentMode = currentDisplay.getMode();
             displayWidth = currentMode.getPhysicalWidth();
@@ -346,10 +346,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             currentOrientation = Configuration.ORIENTATION_LANDSCAPE;
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
         } else {
-            if (prefConfig.renderMode != 0) {
-                prefConfig.videoScaleMode = PreferenceConfiguration.ScaleMode.STRETCH;
-            }
-
             if (prefConfig.autoOrientation) {
                 currentOrientation = getResources().getConfiguration().orientation;
             } else {
@@ -814,11 +810,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             }
         });
 
-        gameMenuCallbacks = new GameMenu(this);
-        menuCoordinator = new StreamMenuCoordinator(
-                this::isOnExternalDisplay,
-                () -> gameMenuCallbacks
-        );
+        ComposeView composeView = findViewById(R.id.streamComposeOverlay);
 
         overlayManager = new StreamOverlayManager(
                 prefConfig,
@@ -830,7 +822,26 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 (ImageButton) findViewById(R.id.floatingMenuButton),
                 (ImageButton) findViewById(R.id.overlayToggleZoomButton),
                 () -> showGameMenu(null),
-                this::toggleZoomMode
+                this::toggleZoomMode,
+                new Handler(Looper.getMainLooper()),
+                composeView,
+                new StreamViewModel(),
+                this::disconnect,
+                this::quit,
+                this::sendKeys,
+                this::applyMouseMode,
+                this::toggleMouseLocalCursor,
+                this::toggleKeyboard,
+                this::toggleVirtualController
+        );
+
+        gameMenuCallbacks = new GameMenu(this);
+        menuCoordinator = new StreamMenuCoordinator(
+                this::isOnExternalDisplay,
+                () -> gameMenuCallbacks,
+                overlayManager::showMenu,
+                overlayManager::hideMenu,
+                overlayManager::isMenuOpen
         );
 
         //fixed size + pacing without back-pressure on MTK
@@ -1487,7 +1498,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         // Save zoom/pan before other cleanup
         if (prefConfig != null && prefConfig.rememberZoomPan && panZoomHandler != null) {
-            SharedPreferences basePrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            SharedPreferences basePrefs = getSharedPreferences(getPackageName() + "_preferences", Context.MODE_PRIVATE);
             basePrefs.edit()
                     .putFloat("number_zoom_scale", panZoomHandler.getScaleFactor())
                     .putFloat("number_pan_offset_x", panZoomHandler.getChildX())
@@ -2095,6 +2106,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     @Override
     public void onBackPressed() {
+        if (menuCoordinator != null && menuCoordinator.isMenuOpen()) {
+            menuCoordinator.hideGameMenu();
+            return;
+        }
         if(prefConfig.enableBackMenu){
             showGameMenu(null);
             return;
@@ -2212,7 +2227,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     //本地鼠标光标切换
-    private void toggleMouseLocalCursor(){
+    public void toggleMouseLocalCursor(){
         if (!grabbedInput) {
             inputCaptureProvider.enableCapture();
             grabbedInput = true;
@@ -2225,7 +2240,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    private void applyMouseMode(int mode) {
+    public void applyMouseMode(int mode) {
         if (pointerInputHandler != null) {
             pointerInputHandler.applyMouseMode(mode);
         }

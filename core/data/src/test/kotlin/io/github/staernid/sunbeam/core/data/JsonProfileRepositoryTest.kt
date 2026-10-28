@@ -84,4 +84,46 @@ class JsonProfileRepositoryTest {
             assertNull(repository.activeProfileFlow.first())
             assertEquals(0, repository.getAllProfiles().size)
         }
+
+    @Test
+    fun initialize_loadsPersistedProfilesAndOptionsFromJson() =
+        runTest(testDispatcher) {
+            val id = UUID.randomUUID()
+            val profile =
+                Profile(
+                    uuid = id,
+                    name = "Handheld 90Hz",
+                    createdUtc = 1_700_000_000_000L,
+                    modifiedUtc = 1_700_000_005_000L,
+                    options =
+                        mapOf(
+                            "fps" to 90,
+                            "enableHdr" to true,
+                            "osc_opacity" to 0.75f,
+                            "resolution" to "1920x1080",
+                        ),
+                )
+
+            repository.saveProfile(profile)
+            repository.setActiveProfile(id)
+
+            val reloadedRepo =
+                JsonProfileRepository(
+                    profilesFile = profilesFile,
+                    ioDispatcher = testDispatcher,
+                )
+            reloadedRepo.initialize()
+
+            val reloaded = reloadedRepo.getProfile(id)
+            assertNotNull(reloaded)
+            assertEquals("Handheld 90Hz", reloaded?.name)
+            assertEquals(1_700_000_000_000L, reloaded?.createdUtc)
+            assertEquals(1_700_000_005_000L, reloaded?.modifiedUtc)
+            assertEquals(90, (reloaded?.options?.get("fps") as? Number)?.toInt())
+            assertEquals(true, reloaded?.options?.get("enableHdr"))
+            assertEquals(0.75f, (reloaded?.options?.get("osc_opacity") as? Number)?.toFloat())
+            assertEquals("1920x1080", reloaded?.options?.get("resolution"))
+            assertTrue(reloaded?.isActive == true)
+            assertEquals(id, reloadedRepo.activeProfileFlow.first()?.uuid)
+        }
 }

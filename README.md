@@ -4,7 +4,7 @@ Android game-stream client for [Sunshine](https://github.com/LizardByte/Sunshine
 
 Fork lineage: [moonlight-stream/moonlight-android](https://github.com/moonlight-stream/moonlight-android)
 → [ClassicOldSong/moonlight-android](https://github.com/ClassicOldSong/moonlight-android) (Artemis) → Sunbeam.
-Direction: a full redesign in Kotlin and Compose. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Direction: a full redesign in Kotlin and Compose. See [docs/tickets/README.md](docs/tickets/README.md).
 
 ✅ = implemented today (inherited from the lineage, not yet re-audited) · ⬜ = planned
 
@@ -30,9 +30,6 @@ Direction: a full redesign in Kotlin and Compose. See [docs/ROADMAP.md](docs/ROA
 - ⬜ Android 16.1 native keyboard capture
 - ⬜ Xbox Series S/X USB driver init, F13-F24, PrtSc
 
-### Experimental
-- ✅ SBS 3D for external displays (MiDaS v2 Lite), under review
-
 ### App
 - ✅ Host discovery (mDNS), manual add, PIN pairing, Wake-on-LAN
 - ✅ Per-host profiles
@@ -47,7 +44,7 @@ Direction: a full redesign in Kotlin and Compose. See [docs/ROADMAP.md](docs/ROA
 ```sh
 git submodule update --init --recursive
 echo "ndk.dir=/path/to/ndk" >> local.properties
-./gradlew :app:assembleNonRoot_gameDebug
+./gradlew :app:assembleDebug
 ```
 
 Flavors and test setup: [android_test_setup.md](android_test_setup.md). Contributor and agent rules: [AGENTS.md](AGENTS.md).

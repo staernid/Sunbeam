@@ -7,24 +7,25 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import io.github.staernid.sunbeam.LimeLog;
-import io.github.staernid.sunbeam.preferences.PreferenceConfiguration;
+import io.github.staernid.sunbeam.core.data.model.Profile;
+import io.github.staernid.sunbeam.core.data.repository.JsonProfileRepository;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import kotlin.Pair;
 
 public class ProfilesManager {
     private static final String PROFILES_DIR = "profiles";
@@ -74,25 +75,30 @@ public class ProfilesManager {
                 // We don't want to warn user about profile not exist
                 return true;
             }
-            try (Reader reader = new FileReader(file)) {
-                Gson gson = new Gson();
-                Type type = new TypeToken<ProfilesData>(){}.getType();
-                ProfilesData data = gson.fromJson(reader, type);
-                if (data != null && data.profiles != null) {
+            try {
+                String rawJson = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                if (!rawJson.trim().isEmpty()) {
+                    Pair<List<Profile>, UUID> data = JsonProfileRepository.decodeProfilesJson(rawJson);
                     profiles.clear();
-                    for (SettingsProfile p : data.profiles) {
-                        profiles.put(p.getUuid(), p);
+                    for (Profile p : data.getFirst()) {
+                        SettingsProfile sp = new SettingsProfile(
+                                p.getUuid(),
+                                p.getName(),
+                                p.getCreatedUtc(),
+                                p.getModifiedUtc(),
+                                new LinkedHashMap<>(p.getOptions())
+                        );
+                        sp.setActive(p.isActive());
+                        profiles.put(sp.getUuid(), sp);
                     }
-                    activeProfileId = data.activeProfileId;
+                    activeProfileId = data.getSecond();
                 }
             } catch (IOException e) {
                 LimeLog.warning("ProfileManager: Failed to load profiles from file:" + e);
-                e.printStackTrace();
                 return false;
             }
         } catch (Exception e) {
             LimeLog.warning("ProfileManager: Failed to load profiles:" + e);
-            e.printStackTrace();
             return false;
         }
 
@@ -111,19 +117,27 @@ public class ProfilesManager {
             }
             File file = new File(dir, PROFILES_FILE);
             try (Writer writer = new FileWriter(file)) {
-                Gson gson = new Gson();
-                ProfilesData data = new ProfilesData();
-                data.profiles = new ArrayList<>(profiles.values());
-                data.activeProfileId = activeProfileId;
-                gson.toJson(data, writer);
+                List<Profile> domainProfiles = new ArrayList<>();
+                for (SettingsProfile sp : profiles.values()) {
+                    Map<String, Object> opts = sp.getOptions() != null
+                            ? sp.getOptions()
+                            : Collections.emptyMap();
+                    domainProfiles.add(new Profile(
+                            sp.getUuid(),
+                            sp.getName(),
+                            sp.getCreatedUtc(),
+                            sp.getModifiedUtc(),
+                            opts,
+                            sp.getUuid().equals(activeProfileId)
+                    ));
+                }
+                writer.write(JsonProfileRepository.encodeProfilesJson(domainProfiles, activeProfileId));
             } catch (IOException e) {
                 LimeLog.warning("ProfileManager: Failed to save profiles to file:" + e);
-                e.printStackTrace();
                 return false;
             }
         } catch (Exception e) {
             LimeLog.warning("ProfileManager: Failed to save profiles:" + e);
-            e.printStackTrace();
             return false;
         }
 
@@ -185,11 +199,6 @@ public class ProfilesManager {
         }
     }
 
-    private static class ProfilesData {
-        List<SettingsProfile> profiles;
-        UUID activeProfileId;
-    }
-
     public interface ProfileChangeListener {
         void onProfilesChanged();
     }
@@ -198,7 +207,7 @@ public class ProfilesManager {
      * Returns a SharedPreferences that overlays the active profile's options on top of the real prefs.
      */
     public SharedPreferences getOverlayingSharedPreferences(Context context) {
-        SharedPreferences base = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences base = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
         SettingsProfile active = getActive();
         if (active == null || active.getOptions() == null) {
             return base;

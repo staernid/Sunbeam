@@ -16,6 +16,7 @@ data class Host(
     val pairState: PairState = PairState.NOT_PAIRED,
     val currentGameId: Int = 0,
     val currentGameUuid: String? = null,
+    val currentGameTitle: String? = null,
     val capabilities: SunshineServerCapabilities = SunshineServerCapabilities.DEFAULT,
     val httpsPort: Int = 0,
 ) {
@@ -41,6 +42,7 @@ data class Host(
         if (pairState != other.pairState) return false
         if (currentGameId != other.currentGameId) return false
         if (currentGameUuid != other.currentGameUuid) return false
+        if (currentGameTitle != other.currentGameTitle) return false
         if (capabilities != other.capabilities) return false
         if (httpsPort != other.httpsPort) return false
 
@@ -60,6 +62,7 @@ data class Host(
         result = 31 * result + pairState.hashCode()
         result = 31 * result + currentGameId
         result = 31 * result + (currentGameUuid?.hashCode() ?: 0)
+        result = 31 * result + (currentGameTitle?.hashCode() ?: 0)
         result = 31 * result + capabilities.hashCode()
         result = 31 * result + httpsPort
         return result

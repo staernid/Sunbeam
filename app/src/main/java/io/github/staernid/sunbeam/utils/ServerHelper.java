@@ -10,13 +10,12 @@ import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 
-import io.github.staernid.sunbeam.AppView;
 import io.github.staernid.sunbeam.Game;
 import io.github.staernid.sunbeam.LimeLog;
 import io.github.staernid.sunbeam.R;
 import io.github.staernid.sunbeam.ShortcutTrampoline;
 import io.github.staernid.sunbeam.binding.PlatformBinding;
-import io.github.staernid.sunbeam.computers.ComputerManagerService;
+import io.github.staernid.sunbeam.computers.IdentityManager;
 import io.github.staernid.sunbeam.nvstream.http.ComputerDetails;
 import io.github.staernid.sunbeam.nvstream.http.HostHttpResponseException;
 import io.github.staernid.sunbeam.nvstream.http.NvApp;
@@ -44,16 +43,16 @@ public class ServerHelper {
 
     public static Intent createPcShortcutIntent(Activity parent, ComputerDetails computer) {
         Intent i = new Intent(parent, ShortcutTrampoline.class);
-        i.putExtra(AppView.NAME_EXTRA, computer.name);
-        i.putExtra(AppView.UUID_EXTRA, computer.uuid);
+        i.putExtra(ShortcutTrampoline.EXTRA_NAME, computer.name);
+        i.putExtra(ShortcutTrampoline.EXTRA_UUID, computer.uuid);
         i.setAction(Intent.ACTION_DEFAULT);
         return i;
     }
 
     public static Intent createAppShortcutIntent(Activity parent, ComputerDetails computer, NvApp app) {
         Intent i = new Intent(parent, ShortcutTrampoline.class);
-        i.putExtra(AppView.NAME_EXTRA, computer.name);
-        i.putExtra(AppView.UUID_EXTRA, computer.uuid);
+        i.putExtra(ShortcutTrampoline.EXTRA_NAME, computer.name);
+        i.putExtra(ShortcutTrampoline.EXTRA_UUID, computer.uuid);
         i.putExtra(Game.EXTRA_APP_NAME, app.getAppName());
         i.putExtra(Game.EXTRA_APP_UUID, app.getAppUUID());
         i.putExtra(Game.EXTRA_APP_ID, ""+app.getAppId());
@@ -90,8 +89,12 @@ public class ServerHelper {
         return display;
     }
 
+    public static Intent createStartIntent(Activity parent, NvApp app, ComputerDetails computer) {
+        return createStartIntent(parent, app, computer, new IdentityManager(parent).getUniqueId());
+    }
+
     public static Intent createStartIntent(Activity parent, NvApp app, ComputerDetails computer,
-                                           ComputerManagerService.ComputerManagerBinder managerBinder) {
+                                           String uniqueId) {
         Intent gameIntent = null;
         PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(parent);
         // Try to add secondary DisplayContext if supported and connected
@@ -108,7 +111,7 @@ public class ServerHelper {
         gameIntent.putExtra(Game.EXTRA_APP_UUID, app.getAppUUID());
         gameIntent.putExtra(Game.EXTRA_APP_ID, app.getAppId());
         gameIntent.putExtra(Game.EXTRA_APP_HDR, app.isHdrSupported());
-        gameIntent.putExtra(Game.EXTRA_UNIQUEID, managerBinder.getUniqueId());
+        gameIntent.putExtra(Game.EXTRA_UNIQUEID, uniqueId != null ? uniqueId : new IdentityManager(parent).getUniqueId());
         gameIntent.putExtra(Game.EXTRA_PC_UUID, computer.uuid);
         gameIntent.putExtra(Game.EXTRA_PC_NAME, computer.name);
 
@@ -137,15 +140,23 @@ public class ServerHelper {
     public static void doStart(
             Activity parent,
             NvApp app,
+            ComputerDetails computer
+    ) {
+        doStart(parent, app, computer, new IdentityManager(parent).getUniqueId());
+    }
+
+    public static void doStart(
+            Activity parent,
+            NvApp app,
             ComputerDetails computer,
-            ComputerManagerService.ComputerManagerBinder managerBinder
+            String uniqueId
     ) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
             Toast.makeText(parent, parent.getString(R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Intent intent = createStartIntent(parent, app, computer, managerBinder);
+        Intent intent = createStartIntent(parent, app, computer, uniqueId);
         parent.startActivity(intent);
     }
 
@@ -241,14 +252,22 @@ public class ServerHelper {
     public static void doQuit(final Activity parent,
                               final ComputerDetails computer,
                               final NvApp app,
-                              final ComputerManagerService.ComputerManagerBinder managerBinder,
+                              final Runnable onComplete
+    ) {
+        doQuit(parent, computer, app, new IdentityManager(parent).getUniqueId(), onComplete);
+    }
+
+    public static void doQuit(final Activity parent,
+                              final ComputerDetails computer,
+                              final NvApp app,
+                              final String uniqueId,
                               final Runnable onComplete
     ) {
         try {
             NvHTTP httpConn = new NvHTTP(
                     ServerHelper.getCurrentAddressFromComputer(computer),
                     computer.httpsPort,
-                    managerBinder.getUniqueId(),
+                    uniqueId != null ? uniqueId : new IdentityManager(parent).getUniqueId(),
                     computer.serverCert,
                     PlatformBinding.getCryptoProvider(parent)
             );

@@ -114,16 +114,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".PcView"
-            android:exported="true"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
-
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
         <!-- Small hack to support launcher shortcuts without relaunching over and over again when the back button is pressed -->
         <activity
             android:name=".ShortcutTrampoline"
@@ -145,33 +135,7 @@
                 <data android:pathPattern=".*\.art" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".AppView"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
-        <activity
-            android:name=".ProfilesActivity"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
-            android:theme="@style/SettingsTheme">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
-        <activity
-            android:name=".EditProfileActivity"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
-            android:label="@string/title_edit_profile"
-            android:theme="@style/SettingsTheme">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
+
         <activity android:name=".utils.ExternalDisplayControlActivity"
             android:exported="false"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
@@ -179,35 +143,7 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@style/ExternalDisplayControllerTheme"/>
-        <activity
-            android:name=".preferences.StreamSettings"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
-            android:label="Streaming Settings"
-            android:theme="@style/SettingsTheme"
-            >
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
-        <activity
-            android:name=".preferences.AddComputerManually"
-            android:exported="true"
-            android:resizeableActivity="true"
-            android:windowSoftInputMode="stateVisible"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
-            android:label="Add Computer Manually">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
 
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="art" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".Game"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
@@ -234,31 +170,12 @@
         </activity>
 
         <service
-            android:name=".discovery.DiscoveryService"
-            android:label="mDNS PC Auto-Discovery Service" />
-        <service
-            android:name=".computers.ComputerManagerService"
-            android:label="Computer Management Service" />
-        <service
             android:name=".binding.input.driver.UsbDriverService"
             android:label="Usb Driver Service" />
 
         <activity
             android:name="androidx.activity.ComponentActivity"
             android:exported="true" />
-
-        <activity
-            android:name=".HelpActivity"
-            android:resizeableActivity="true"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
-            <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
-            <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
-        </activity>
-
-
-        <activity android:name=".DebugInfoActivity"
-            android:launchMode="singleTask"/>
 
         <!-- 无障碍 实体键盘 屏蔽某些快捷键 -->
         <service

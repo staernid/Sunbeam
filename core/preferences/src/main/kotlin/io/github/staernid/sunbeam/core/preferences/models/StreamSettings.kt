@@ -83,4 +83,7 @@ data class StreamSettings(
     val enableFloatingButton: Boolean = false,
     val showOverlayZoomToggleButton: Boolean = false,
     val enablePip: Boolean = false,
+    val lastSelectedHostUuid: String? = null,
+    val oledBlackMode: Boolean = false,
+    val dynamicColor: Boolean = true,
 )

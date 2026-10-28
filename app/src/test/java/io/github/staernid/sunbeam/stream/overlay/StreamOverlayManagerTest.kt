@@ -13,8 +13,10 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
 import androidx.test.core.app.ApplicationProvider
 import io.github.staernid.sunbeam.R
+import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration
 import io.github.staernid.sunbeam.shadows.ShadowMoonBridge
@@ -225,5 +227,78 @@ class StreamOverlayManagerTest {
 
         manager.updateZoomButtonAppearance(isPanZoomMode = false)
         assertEquals(1.0f, overlayZoomButton.alpha, 0.01f)
+    }
+
+    @Test
+    fun performanceStatsParser_extractsMetricsAccurately() {
+        val log = "Video stream: 1920x1080 60.00 FPS (AV1 Main)\n" +
+            "Incoming frame rate: 60.00 FPS\n" +
+            "Network latency: min 10ms, max 20ms, avg 15ms\n" +
+            "Decode time: 3.5 ms\n" +
+            "Frames dropped by your network: 0.5%"
+
+        val stats = PerformanceStatsParser.parse(log)
+        assertEquals(60.0f, stats.fps, 0.01f)
+        assertEquals(15, stats.networkLatencyMs)
+        assertEquals(3.5f, stats.decodeLatencyMs, 0.01f)
+        assertEquals(0.5f, stats.packetLossPercentage, 0.01f)
+        assertEquals("AV1 Main", stats.videoFormat)
+    }
+
+    @Test
+    fun streamOverlayManager_withComposeView_dispatchesStateToViewModel() {
+        prefConfig.enablePerfOverlay = true
+        prefConfig.enablePerfOverlayLite = true
+        val composeView = ComposeView(context)
+
+        var disconnectRequested = false
+        val manager = StreamOverlayManager(
+            prefConfig = prefConfig,
+            decorBoundsProvider = { 1920 },
+            perfOverlayView = perfOverlayView,
+            perfOverlayLite = perfOverlayLite,
+            perfOverlayBig = perfOverlayBig,
+            notificationOverlayView = notificationOverlayView,
+            floatingMenuButton = floatingMenuButton,
+            overlayZoomButton = overlayZoomButton,
+            onMenuRequested = {},
+            onZoomToggleRequested = {},
+            composeView = composeView,
+            onDisconnectRequested = { disconnectRequested = true },
+        )
+
+        // Initial state
+        assertEquals(PerfOverlayMode.LITE, manager.viewModel.uiState.value.perfOverlayMode)
+        assertTrue(manager.viewModel.uiState.value.isPerfOverlayEnabled)
+
+        // Perf stats update
+        manager.onPerfUpdate("120 FPS, avg 8ms, Decode time: 2.1 ms")
+        assertEquals(120f, manager.viewModel.uiState.value.perfStats.fps, 0.01f)
+        assertEquals(8, manager.viewModel.uiState.value.perfStats.networkLatencyMs)
+        assertEquals(2.1f, manager.viewModel.uiState.value.perfStats.decodeLatencyMs, 0.01f)
+
+        // Connection warning update
+        manager.onConnectionStatusUpdate(MoonBridge.CONN_STATUS_POOR)
+        assertTrue(manager.viewModel.uiState.value.connectionWarning != null)
+
+        manager.onConnectionStatusUpdate(MoonBridge.CONN_STATUS_OKAY)
+        assertTrue(manager.viewModel.uiState.value.connectionWarning == null)
+
+        // Menu presentation
+        assertFalse(manager.isMenuOpen())
+        manager.showMenu()
+        assertTrue(manager.isMenuOpen())
+        manager.hideMenu()
+        assertFalse(manager.isMenuOpen())
+
+        // Action hook
+        manager.viewModel.requestDisconnect()
+        assertTrue(disconnectRequested)
+
+        // PiP transitions
+        manager.onEnterPiP()
+        assertTrue(manager.viewModel.uiState.value.isInPiP)
+        manager.onExitPiP()
+        assertFalse(manager.viewModel.uiState.value.isInPiP)
     }
 }

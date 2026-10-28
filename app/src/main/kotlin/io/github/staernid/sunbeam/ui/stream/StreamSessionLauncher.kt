@@ -17,13 +17,19 @@ import io.github.staernid.sunbeam.core.data.repository.HostRepository
 import io.github.staernid.sunbeam.core.data.repository.ProfileRepository
 import io.github.staernid.sunbeam.core.preferences.PreferencesRepository
 import io.github.staernid.sunbeam.core.preferences.models.AudioConfiguration
+import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
 import io.github.staernid.sunbeam.core.preferences.models.VideoFormatOption
+import io.github.staernid.sunbeam.core.preferences.models.VideoScaleMode
 import io.github.staernid.sunbeam.core.stream.model.AudioChannelConfiguration
 import io.github.staernid.sunbeam.core.stream.model.StreamConfig
 import io.github.staernid.sunbeam.core.stream.model.VideoFormat
+import io.github.staernid.sunbeam.features.profiles.model.ProfileOptions
 import io.github.staernid.sunbeam.features.profiles.model.bitrateKbps
 import io.github.staernid.sunbeam.features.profiles.model.fps
 import io.github.staernid.sunbeam.features.profiles.model.height
+import io.github.staernid.sunbeam.features.profiles.model.oscEnabled
+import io.github.staernid.sunbeam.features.profiles.model.oscOpacity
+import io.github.staernid.sunbeam.features.profiles.model.stretchMode
 import io.github.staernid.sunbeam.features.profiles.model.width
 import io.github.staernid.sunbeam.nvstream.http.NvHTTP
 import io.github.staernid.sunbeam.stream.StreamIntentParser
@@ -32,6 +38,9 @@ import kotlinx.coroutines.flow.firstOrNull
 import java.io.ByteArrayInputStream
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import kotlin.math.roundToInt
+
+private const val PERCENTAGE_MULTIPLIER = 100f
 
 /**
  * Data and lifecycle bridge wiring [HostRepository], [AppRepository], [PreferencesRepository],
@@ -43,6 +52,51 @@ class StreamSessionLauncher(
     private val preferencesRepository: PreferencesRepository,
     private val profileRepository: ProfileRepository,
 ) {
+    /**
+     * Resolves the current [StreamSettings] from [PreferencesRepository] with any active
+     * [io.github.staernid.sunbeam.core.data.model.Profile] overrides applied.
+     */
+    suspend fun resolveEffectiveSettings(): StreamSettings {
+        val base = preferencesRepository.getSettings()
+        val activeProfile = profileRepository.activeProfileFlow.firstOrNull() ?: return base
+
+        val scaleMode =
+            if (activeProfile.options.containsKey(ProfileOptions.KEY_STRETCH)) {
+                if (activeProfile.stretchMode) VideoScaleMode.STRETCH else VideoScaleMode.FIT
+            } else {
+                base.videoScaleMode
+            }
+
+        val oscEnabled =
+            if (activeProfile.options.containsKey(ProfileOptions.KEY_OSC_ENABLED)) {
+                activeProfile.oscEnabled
+            } else {
+                base.onscreenController
+            }
+
+        val oscOpacity =
+            if (activeProfile.options.containsKey(ProfileOptions.KEY_OSC_OPACITY)) {
+                val rawOpacity = activeProfile.oscOpacity
+                if (rawOpacity <= 1.0f) {
+                    (rawOpacity * PERCENTAGE_MULTIPLIER).roundToInt()
+                } else {
+                    rawOpacity.roundToInt()
+                }
+            } else {
+                base.oscOpacity
+            }
+
+        return base.copy(
+            width = activeProfile.width,
+            height = activeProfile.height,
+            fps = activeProfile.fps,
+            bitrateKbps = activeProfile.bitrateKbps,
+            videoScaleMode = scaleMode,
+            onscreenController = oscEnabled,
+            oscOpacity = oscOpacity,
+        )
+    }
+
     suspend fun resolveStreamConfig(
         hostUuid: String,
         appId: Int,
@@ -58,30 +112,24 @@ class StreamSessionLauncher(
         val app = apps.find { it.id == appId }
             ?: return Result.failure(IllegalArgumentException("App not found for id: $appId"))
 
-        val settings = preferencesRepository.getSettings()
-        val activeProfile = profileRepository.activeProfileFlow.firstOrNull()
-
-        val width = activeProfile?.width ?: settings.width
-        val height = activeProfile?.height ?: settings.height
-        val fps = activeProfile?.fps ?: settings.fps
-        val bitrateKbps = activeProfile?.bitrateKbps ?: settings.bitrateKbps
+        val effectiveSettings = resolveEffectiveSettings()
 
         val audioConfig =
-            when (settings.audioConfig) {
+            when (effectiveSettings.audioConfig) {
                 AudioConfiguration.STEREO -> AudioChannelConfiguration.STEREO
                 AudioConfiguration.SURROUND_51 -> AudioChannelConfiguration.SURROUND_51
                 AudioConfiguration.SURROUND_71 -> AudioChannelConfiguration.SURROUND_71
             }
 
         val videoFormat =
-            when (settings.videoFormat) {
+            when (effectiveSettings.videoFormat) {
                 VideoFormatOption.AUTO -> VideoFormat.AUTO
                 VideoFormatOption.FORCE_H264 -> VideoFormat.H264
                 VideoFormatOption.FORCE_HEVC -> VideoFormat.HEVC
                 VideoFormatOption.FORCE_AV1 -> VideoFormat.AV1
             }
 
-        val enableHdr = settings.enableHdr && app.isHdrSupported
+        val enableHdr = effectiveSettings.enableHdr && app.isHdrSupported
 
         val serverCert: X509Certificate? =
             host.serverCertDer?.let { certBytes ->
@@ -99,10 +147,10 @@ class StreamSessionLauncher(
             StreamConfig(
                 hostAddress = targetAddress.address,
                 httpsPort = httpsPort,
-                width = width,
-                height = height,
-                fps = fps,
-                bitrateKbps = bitrateKbps,
+                width = effectiveSettings.width,
+                height = effectiveSettings.height,
+                fps = effectiveSettings.fps,
+                bitrateKbps = effectiveSettings.bitrateKbps,
                 audioConfiguration = audioConfig,
                 videoFormat = videoFormat,
                 enableHdr = enableHdr,
@@ -117,6 +165,7 @@ class StreamSessionLauncher(
         host: Host,
         app: HostApp,
         config: StreamConfig? = null,
+        settings: StreamSettings? = null,
     ): Intent {
         val targetAddress = host.localAddress ?: host.remoteAddress ?: host.manualAddress ?: host.ipv6Address
         val uniqueId = IdentityManager(context).uniqueId
@@ -137,6 +186,10 @@ class StreamSessionLauncher(
             putExtra(Game.EXTRA_UNIQUEID, uniqueId)
             host.serverCertDer?.let { putExtra(Game.EXTRA_SERVER_CERT, it) }
 
+            if (settings != null) {
+                StreamIntentParser.putStreamSettingsExtras(this, settings)
+            }
+
             if (config != null) {
                 putExtra(StreamIntentParser.EXTRA_STREAM_WIDTH, config.width)
                 putExtra(StreamIntentParser.EXTRA_STREAM_HEIGHT, config.height)
@@ -151,8 +204,9 @@ class StreamSessionLauncher(
         host: Host,
         app: HostApp,
     ) {
+        val effectiveSettings = resolveEffectiveSettings()
         val config = resolveStreamConfig(host.uuid, app.id).getOrNull()
-        val intent = createGameActivityIntent(context, host, app, config)
+        val intent = createGameActivityIntent(context, host, app, config, effectiveSettings)
         context.startActivity(intent)
     }
 

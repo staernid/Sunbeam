@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -249,6 +250,53 @@ fun DeleteConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+fun HelpDialog(
+    onDismiss: () -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Setup & Troubleshooting", style = MaterialTheme.typography.titleLarge)
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Getting Started with Sunshine:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "1. Ensure Sunshine is installed and running on your PC.\n" +
+                        "2. Ensure your PC and this device are connected to the same local network.\n" +
+                        "3. Pair by clicking 'Pair' and entering the generated 4-digit PIN " +
+                        "into Sunshine (Configuration -> PIN).\n" +
+                        "4. To use Wake-on-LAN, ensure WoL is enabled in your PC's BIOS " +
+                        "and network adapter settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(
+                    onClick = {
+                        uriHandler.openUri("https://docs.lizardbyte.dev/projects/sunshine/en/latest/")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Official Sunshine Documentation")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Close")
+            }
         },
     )
 }

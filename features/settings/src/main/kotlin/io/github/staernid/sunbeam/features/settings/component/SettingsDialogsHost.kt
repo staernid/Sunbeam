@@ -1,8 +1,9 @@
-@file:Suppress("LongMethod")
+@file:Suppress("LongMethod", "LongParameterList")
 
 package io.github.staernid.sunbeam.features.settings.component
 
 import androidx.compose.runtime.Composable
+import io.github.staernid.sunbeam.core.preferences.models.AnalogStickScrolling
 import io.github.staernid.sunbeam.core.preferences.models.AudioConfiguration
 import io.github.staernid.sunbeam.core.preferences.models.FramePacingMode
 import io.github.staernid.sunbeam.core.preferences.models.Resolution
@@ -10,6 +11,7 @@ import io.github.staernid.sunbeam.core.preferences.models.VideoFormatOption
 import io.github.staernid.sunbeam.core.preferences.models.VideoScaleMode
 import io.github.staernid.sunbeam.features.settings.SettingsDialogState
 import io.github.staernid.sunbeam.features.settings.SettingsUiState
+import io.github.staernid.sunbeam.features.settings.displayLabel
 
 private val FPS_OPTIONS = listOf(30, 60, 90, 120)
 
@@ -24,6 +26,7 @@ fun SettingsDialogsHost(
     onAudioConfigSelect: (AudioConfiguration) -> Unit,
     onFramePacingSelect: (FramePacingMode) -> Unit,
     onConfirmReset: () -> Unit,
+    onAnalogStickScrollingSelect: (AnalogStickScrolling) -> Unit = {},
 ) {
     when (uiState.dialogState) {
         is SettingsDialogState.None -> Unit
@@ -88,6 +91,17 @@ fun SettingsDialogsHost(
                 selectedOption = uiState.settings.framePacing,
                 optionLabel = { it.name },
                 onOptionSelected = onFramePacingSelect,
+                onDismiss = onDismissDialog,
+            )
+        }
+
+        is SettingsDialogState.AnalogStickScrollingPicker -> {
+            ListSelectionDialog(
+                title = "Select Analog Stick Scrolling",
+                options = AnalogStickScrolling.entries,
+                selectedOption = uiState.settings.analogStickScrolling,
+                optionLabel = { it.displayLabel },
+                onOptionSelected = onAnalogStickScrollingSelect,
                 onDismiss = onDismissDialog,
             )
         }

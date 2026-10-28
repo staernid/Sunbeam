@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList")
+
 package io.github.staernid.sunbeam.features.hosts
 
 import androidx.compose.foundation.layout.Arrangement
@@ -38,8 +40,10 @@ import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.designsystem.adaptive.rememberSunbeamAdaptiveInfo
 import io.github.staernid.sunbeam.core.designsystem.component.SunbeamCenteredLoadingScreen
 import io.github.staernid.sunbeam.core.designsystem.component.SunbeamTopAppBar
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 import io.github.staernid.sunbeam.features.hosts.component.AddHostDialog
 import io.github.staernid.sunbeam.features.hosts.component.DeleteConfirmDialog
+import io.github.staernid.sunbeam.features.hosts.component.HelpDialog
 import io.github.staernid.sunbeam.features.hosts.component.HostCard
 import io.github.staernid.sunbeam.features.hosts.component.HostDetailsDialog
 import io.github.staernid.sunbeam.features.hosts.component.PairingDialog
@@ -61,6 +65,8 @@ fun HostsScreen(
     onSettingsClick: () -> Unit,
     onHelpClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onWakeClick: (Host) -> Unit = {},
+    onResumeClick: (Host) -> Unit = {},
 ) {
     val adaptiveInfo = rememberSunbeamAdaptiveInfo(windowSizeClass)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -78,13 +84,13 @@ fun HostsScreen(
             SunbeamTopAppBar(
                 title = "Sunbeam",
                 actions = {
-                    IconButton(onClick = onAddHostClick) {
+                    IconButton(onClick = onAddHostClick, modifier = Modifier.sunbeamFocusable()) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = "Add Host")
                     }
-                    IconButton(onClick = onHelpClick) {
+                    IconButton(onClick = onHelpClick, modifier = Modifier.sunbeamFocusable()) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help")
                     }
-                    IconButton(onClick = onSettingsClick) {
+                    IconButton(onClick = onSettingsClick, modifier = Modifier.sunbeamFocusable()) {
                         Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
@@ -99,6 +105,8 @@ fun HostsScreen(
             onHostLongClick = onHostLongClick,
             onPairClick = onPairClick,
             onAddHostClick = onAddHostClick,
+            onWakeClick = onWakeClick,
+            onResumeClick = onResumeClick,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -121,6 +129,8 @@ private fun HostsContent(
     onPairClick: (Host) -> Unit,
     onAddHostClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onWakeClick: (Host) -> Unit = {},
+    onResumeClick: (Host) -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when {
@@ -147,6 +157,8 @@ private fun HostsContent(
                             onHostClick = onHostClick,
                             onHostLongClick = onHostLongClick,
                             onPairClick = onPairClick,
+                            onWakeClick = onWakeClick,
+                            onResumeClick = onResumeClick,
                         )
                     }
                 }
@@ -183,6 +195,9 @@ private fun HostsDialogsHost(
                 onDismiss = onDismissDialog,
                 onConfirm = onDeleteHostConfirm,
             )
+        }
+        is HostsDialogState.Help -> {
+            HelpDialog(onDismiss = onDismissDialog)
         }
         HostsDialogState.None -> Unit
     }
@@ -224,7 +239,10 @@ fun EmptyHostsView(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(onClick = onAddHostClick) {
+        Button(
+            onClick = onAddHostClick,
+            modifier = Modifier.sunbeamFocusable(),
+        ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.size(8.dp))
             Text("Add Host Manually")

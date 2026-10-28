@@ -6,9 +6,11 @@
 
 package io.github.staernid.sunbeam.features.profiles.component
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,18 +21,25 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,11 +47,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
+import kotlin.math.roundToInt
+
+internal const val OSC_PREFERENCE_NAME = "OSC"
+
+internal fun clearSavedOscPreferences(context: Context) {
+    context
+        .getSharedPreferences(OSC_PREFERENCE_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .clear()
+        .apply()
+}
 
 @Composable
 fun OscPreviewView(
@@ -51,7 +78,11 @@ fun OscPreviewView(
     onOpacityChange: (Float) -> Unit,
     onScaleChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    onResetLayout: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    var resetCounter by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -62,6 +93,11 @@ fun OscPreviewView(
             scale = scale,
             onOpacityChange = onOpacityChange,
             onScaleChange = onScaleChange,
+            onResetLayout = {
+                clearSavedOscPreferences(context)
+                resetCounter++
+                onResetLayout()
+            },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -82,6 +118,7 @@ fun OscPreviewView(
                 OscSimulatedScreen(
                     opacity = opacity,
                     scale = scale,
+                    resetKey = resetCounter,
                 )
             }
         }
@@ -94,14 +131,33 @@ private fun OscControlsBar(
     scale: Float,
     onOpacityChange: (Float) -> Unit,
     onScaleChange: (Float) -> Unit,
+    onResetLayout: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Virtual Controller Layout Preview",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Virtual Controller Layout Preview",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                OutlinedButton(
+                    onClick = onResetLayout,
+                    modifier = Modifier.sunbeamFocusable(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Restore,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Reset Layout to Default")
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -113,7 +169,10 @@ private fun OscControlsBar(
                     value = opacity,
                     onValueChange = onOpacityChange,
                     valueRange = 0.1f..1.0f,
-                    modifier = Modifier.fillMaxWidth(0.8f),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .semantics { contentDescription = "On-Screen Controls Opacity" }
+                        .sunbeamFocusable(),
                 )
             }
             Row(
@@ -126,7 +185,10 @@ private fun OscControlsBar(
                     value = scale,
                     onValueChange = onScaleChange,
                     valueRange = 0.5f..1.5f,
-                    modifier = Modifier.fillMaxWidth(0.8f),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .semantics { contentDescription = "On-Screen Controls Scale" }
+                        .sunbeamFocusable(),
                 )
             }
         }
@@ -137,7 +199,11 @@ private fun OscControlsBar(
 private fun OscSimulatedScreen(
     opacity: Float,
     scale: Float,
+    resetKey: Int,
 ) {
+    var leftClusterOffset by remember(resetKey) { mutableStateOf(Offset.Zero) }
+    var rightClusterOffset by remember(resetKey) { mutableStateOf(Offset.Zero) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -146,17 +212,37 @@ private fun OscSimulatedScreen(
             .background(Color.Black)
             .border(1.dp, Color(0xFF333338), RoundedCornerShape(8.dp)),
     ) {
-        // Shoulder buttons
         OscShoulderBar(opacity = opacity, scale = scale)
 
-        // Center menu buttons
         OscCenterMenu(opacity = opacity, scale = scale, modifier = Modifier.align(Alignment.TopCenter))
 
-        // Left control cluster (D-pad & Left Stick)
-        OscLeftControls(opacity = opacity, scale = scale, modifier = Modifier.align(Alignment.BottomStart))
+        OscLeftControls(
+            opacity = opacity,
+            scale = scale,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset { IntOffset(leftClusterOffset.x.roundToInt(), leftClusterOffset.y.roundToInt()) }
+                .pointerInput(resetKey) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        leftClusterOffset += dragAmount
+                    }
+                },
+        )
 
-        // Right control cluster (Face buttons & Right Stick)
-        OscRightControls(opacity = opacity, scale = scale, modifier = Modifier.align(Alignment.BottomEnd))
+        OscRightControls(
+            opacity = opacity,
+            scale = scale,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset { IntOffset(rightClusterOffset.x.roundToInt(), rightClusterOffset.y.roundToInt()) }
+                .pointerInput(resetKey) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        rightClusterOffset += dragAmount
+                    }
+                },
+        )
     }
 }
 
@@ -209,7 +295,6 @@ private fun OscLeftControls(
         horizontalArrangement = Arrangement.spacedBy((16 * scale).dp),
         verticalAlignment = Alignment.Bottom,
     ) {
-        // D-Pad
         Box(modifier = Modifier.size((90 * scale).dp), contentAlignment = Alignment.Center) {
             OscVirtualButton("▲", opacity, (28 * scale).dp, (28 * scale).dp, Modifier.align(Alignment.TopCenter))
             OscVirtualButton("◀", opacity, (28 * scale).dp, (28 * scale).dp, Modifier.align(Alignment.CenterStart))
@@ -217,7 +302,6 @@ private fun OscLeftControls(
             OscVirtualButton("▼", opacity, (28 * scale).dp, (28 * scale).dp, Modifier.align(Alignment.BottomCenter))
         }
 
-        // Left Thumbstick
         OscVirtualStick(label = "LS", opacity = opacity, size = (70 * scale).dp)
     }
 }
@@ -233,10 +317,8 @@ private fun OscRightControls(
         horizontalArrangement = Arrangement.spacedBy((16 * scale).dp),
         verticalAlignment = Alignment.Bottom,
     ) {
-        // Right Thumbstick
         OscVirtualStick(label = "RS", opacity = opacity, size = (70 * scale).dp)
 
-        // Face Buttons (Y, X, B, A)
         Box(modifier = Modifier.size((90 * scale).dp), contentAlignment = Alignment.Center) {
             OscVirtualButton(
                 "Y",

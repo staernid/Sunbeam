@@ -23,6 +23,7 @@ class SunbeamNavigatorTest {
 
         assertEquals(appsScreen, navigator.currentScreen)
         assertEquals(TopLevelTab.HOSTS, navigator.currentTab)
+        assertEquals(NavigationAction.PUSH, navigator.lastAction)
         assertTrue(navigator.canNavigateBack)
         assertEquals(2, navigator.backstack.size)
 
@@ -34,6 +35,7 @@ class SunbeamNavigatorTest {
 
         assertTrue(navigator.popBack())
         assertEquals(appsScreen, navigator.currentScreen)
+        assertEquals(NavigationAction.POP, navigator.lastAction)
 
         assertTrue(navigator.popBack())
         assertEquals(SunbeamScreen.Hosts, navigator.currentScreen)
@@ -43,13 +45,15 @@ class SunbeamNavigatorTest {
     }
 
     @Test
-    fun testSwitchTab() {
+    fun testSwitchTabPreservesPerTabBackstackAndResetsOnReselect() {
         val navigator = SunbeamNavigator()
-        navigator.navigateTo(SunbeamScreen.Apps("host-1"))
+        val appsScreen = SunbeamScreen.Apps("host-1")
+        navigator.navigateTo(appsScreen)
 
         navigator.switchTab(TopLevelTab.SETTINGS)
         assertEquals(SunbeamScreen.Settings, navigator.currentScreen)
         assertEquals(TopLevelTab.SETTINGS, navigator.currentTab)
+        assertEquals(NavigationAction.TAB_SWITCH, navigator.lastAction)
         assertFalse(navigator.canNavigateBack)
 
         navigator.switchTab(TopLevelTab.PROFILES)
@@ -57,9 +61,17 @@ class SunbeamNavigatorTest {
         assertEquals(TopLevelTab.PROFILES, navigator.currentTab)
         assertFalse(navigator.canNavigateBack)
 
+        // Switching back to HOSTS restores its nested Apps destination
+        navigator.switchTab(TopLevelTab.HOSTS)
+        assertEquals(appsScreen, navigator.currentScreen)
+        assertEquals(TopLevelTab.HOSTS, navigator.currentTab)
+        assertTrue(navigator.canNavigateBack)
+
+        // Re-selecting the active HOSTS tab resets its stack to root
         navigator.switchTab(TopLevelTab.HOSTS)
         assertEquals(SunbeamScreen.Hosts, navigator.currentScreen)
         assertEquals(TopLevelTab.HOSTS, navigator.currentTab)
+        assertFalse(navigator.canNavigateBack)
     }
 
     @Test

@@ -126,6 +126,11 @@ object StreamSettingsMapper {
                     ?: defaultSettings.resumeWithoutConfirm,
             fullScreen = prefs[StreamPreferenceKeys.FULL_SCREEN] ?: defaultSettings.fullScreen,
             enablePip = prefs[StreamPreferenceKeys.ENABLE_PIP] ?: defaultSettings.enablePip,
+            lastSelectedHostUuid =
+                prefs[StreamPreferenceKeys.LAST_SELECTED_HOST_UUID]
+                    ?: defaultSettings.lastSelectedHostUuid,
+            oledBlackMode = prefs[StreamPreferenceKeys.OLED_BLACK_MODE] ?: defaultSettings.oledBlackMode,
+            dynamicColor = prefs[StreamPreferenceKeys.DYNAMIC_COLOR] ?: defaultSettings.dynamicColor,
         )
     }
 
@@ -200,6 +205,11 @@ object StreamSettingsMapper {
         prefs[StreamPreferenceKeys.RESUME_WITHOUT_CONFIRM] = settings.resumeWithoutConfirm
         prefs[StreamPreferenceKeys.FULL_SCREEN] = settings.fullScreen
         prefs[StreamPreferenceKeys.ENABLE_PIP] = settings.enablePip
+        prefs[StreamPreferenceKeys.OLED_BLACK_MODE] = settings.oledBlackMode
+        prefs[StreamPreferenceKeys.DYNAMIC_COLOR] = settings.dynamicColor
+        settings.lastSelectedHostUuid?.let {
+            prefs[StreamPreferenceKeys.LAST_SELECTED_HOST_UUID] = it
+        } ?: prefs.remove(StreamPreferenceKeys.LAST_SELECTED_HOST_UUID)
     }
 
     @Suppress("LongMethod")
@@ -272,10 +282,15 @@ object StreamSettingsMapper {
                 .putBoolean(StreamPreferenceKeys.RESUME_WITHOUT_CONFIRM.name, settings.resumeWithoutConfirm)
                 .putBoolean(StreamPreferenceKeys.FULL_SCREEN.name, settings.fullScreen)
                 .putBoolean(StreamPreferenceKeys.ENABLE_PIP.name, settings.enablePip)
+                .putBoolean(StreamPreferenceKeys.OLED_BLACK_MODE.name, settings.oledBlackMode)
+                .putBoolean(StreamPreferenceKeys.DYNAMIC_COLOR.name, settings.dynamicColor)
 
         settings.customResolution?.let { editor.putString(StreamPreferenceKeys.CUSTOM_RESOLUTION.name, it) }
         settings.customRefreshRate?.let { editor.putString(StreamPreferenceKeys.CUSTOM_REFRESH_RATE.name, it) }
         settings.customBitrateKbps?.let { editor.putString(StreamPreferenceKeys.CUSTOM_BITRATE.name, it.toString()) }
+        settings.lastSelectedHostUuid?.let {
+            editor.putString(StreamPreferenceKeys.LAST_SELECTED_HOST_UUID.name, it)
+        }
         editor.apply()
     }
 }

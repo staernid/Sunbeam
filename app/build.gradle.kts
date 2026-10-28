@@ -1,6 +1,8 @@
 plugins {
     id("sunbeam.android.application")
     id("sunbeam.android.compose")
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.metro)
 }
 
 android {
@@ -19,7 +21,7 @@ android {
         val obtainiumUrl =
             "https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.staernid.sunbeam%22" +
                 "%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fstaernid%2Fmoonlight-android%22%2C%22author%22%3A%22staernid%22" +
-                "%2C%22name%22%3A%22Sunbeam%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22nonRoot%5C%22" +
+                "%2C%22name%22%3A%22Sunbeam%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22release%5C%22" +
                 "%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D"
 
         resValue(
@@ -89,18 +91,11 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.jmdns)
     implementation(libs.shield.controller.extensions)
-    implementation(libs.gson)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.metro.runtime)
     implementation(libs.androidx.annotation)
-    implementation(libs.androidx.cardview)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.preference)
-    implementation(libs.androidx.recyclerview)
     implementation(libs.material)
-    implementation(libs.search.preference)
-    implementation(libs.mp.android.chart)
-    implementation(libs.litert)
-    implementation(libs.litert.gpu)
-    implementation(libs.opencv)
 
     testImplementation(libs.test.junit)
     testImplementation(libs.test.androidx.core)

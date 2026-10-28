@@ -1,10 +1,15 @@
 plugins {
     id("sunbeam.android.library")
     id("sunbeam.android.compose")
+    alias(libs.plugins.roborazzi)
 }
 
 android {
     namespace = "io.github.staernid.sunbeam.features.apps"
+}
+
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }
 
 dependencies {
@@ -19,6 +24,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.compose)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.test.compose.ui.manifest)
@@ -29,4 +35,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.test.compose.ui.junit4)
     testImplementation(libs.test.compose.ui.manifest)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 }

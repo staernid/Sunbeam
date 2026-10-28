@@ -1,6 +1,8 @@
 package io.github.staernid.sunbeam.features.profiles
 
 import android.view.KeyEvent
+import io.github.staernid.sunbeam.core.preferences.PreferencesRepository
+import io.github.staernid.sunbeam.core.preferences.models.StreamSettings
 import io.github.staernid.sunbeam.features.profiles.model.GamepadButton
 import io.github.staernid.sunbeam.features.profiles.model.GamepadDeviceInfo
 import io.github.staernid.sunbeam.features.profiles.model.bitrateKbps
@@ -13,6 +15,10 @@ import io.github.staernid.sunbeam.features.profiles.model.stretchMode
 import io.github.staernid.sunbeam.features.profiles.model.width
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -34,7 +40,24 @@ import org.robolectric.RobolectricTestRunner
 class ProfilesViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var profileRepo: FakeProfileRepository
+    private lateinit var preferencesRepo: TestPreferencesRepository
     private lateinit var viewModel: ProfilesViewModel
+
+    private class TestPreferencesRepository : PreferencesRepository {
+        private val state = MutableStateFlow(StreamSettings())
+        override val settingsFlow: Flow<StreamSettings> = state.asStateFlow()
+
+        override suspend fun getSettings(): StreamSettings = state.value
+
+        override suspend fun updateSettings(transform: (StreamSettings) -> StreamSettings): StreamSettings {
+            state.update(transform)
+            return state.value
+        }
+
+        override suspend fun setSettings(settings: StreamSettings) {
+            state.value = settings
+        }
+    }
 
     private val sampleProfile1 = createNewProfile(
         name = "Ultra 4K",
@@ -63,7 +86,8 @@ class ProfilesViewModelTest {
             initialProfiles = listOf(sampleProfile1, sampleProfile2),
             initialActiveId = sampleProfile1.uuid,
         )
-        viewModel = ProfilesViewModel(profileRepo)
+        preferencesRepo = TestPreferencesRepository()
+        viewModel = ProfilesViewModel(profileRepo, preferencesRepo)
         testDispatcher.scheduler.advanceUntilIdle()
     }
 
@@ -262,12 +286,24 @@ class ProfilesViewModelTest {
     }
 
     @Test
-    fun testOscOpacityAndScale() {
+    fun testOscOpacityAndScalePersistsToPreferences() = runTest(testDispatcher) {
         viewModel.setOscOpacity(0.45f)
+        advanceUntilIdle()
         assertEquals(0.45f, viewModel.uiState.value.oscOpacity, 0.001f)
+        assertEquals(45, preferencesRepo.getSettings().oscOpacity)
 
         viewModel.setOscScale(1.4f)
         assertEquals(1.4f, viewModel.uiState.value.oscScale, 0.001f)
+
+        viewModel.resetOscLayout()
+        advanceUntilIdle()
+        assertEquals(0.9f, viewModel.uiState.value.oscOpacity, 0.001f)
+        assertEquals(1.0f, viewModel.uiState.value.oscScale, 0.001f)
+        assertEquals(90, preferencesRepo.getSettings().oscOpacity)
+        assertEquals(
+            "On-screen controls layout reset to default",
+            viewModel.uiState.value.userFeedbackMessage,
+        )
     }
 
     @Test

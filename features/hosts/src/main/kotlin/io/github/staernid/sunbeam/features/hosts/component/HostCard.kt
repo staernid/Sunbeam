@@ -20,8 +20,10 @@ import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +58,8 @@ fun HostCard(
     onHostLongClick: (Host) -> Unit,
     onPairClick: (Host) -> Unit,
     modifier: Modifier = Modifier,
+    onWakeClick: (Host) -> Unit = {},
+    onResumeClick: (Host) -> Unit = {},
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -77,11 +81,19 @@ fun HostCard(
         ) {
             HostCardHeader(host = host, onHostLongClick = onHostLongClick)
             Spacer(modifier = Modifier.height(12.dp))
-            HostCardFooter(host = host, onPairClick = onPairClick)
+            HostCardFooter(
+                host = host,
+                onPairClick = onPairClick,
+                onWakeClick = onWakeClick,
+                onResumeClick = onResumeClick,
+            )
 
             if (host.currentGameId != 0) {
                 Spacer(modifier = Modifier.height(8.dp))
-                HostActiveGameBadge(gameId = host.currentGameId)
+                HostActiveGameBadge(
+                    gameId = host.currentGameId,
+                    gameTitle = host.currentGameTitle,
+                )
             }
         }
     }
@@ -140,7 +152,9 @@ private fun HostCardHeader(
 
         IconButton(
             onClick = { onHostLongClick(host) },
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier
+                .size(32.dp)
+                .sunbeamFocusable(),
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
@@ -155,6 +169,8 @@ private fun HostCardHeader(
 private fun HostCardFooter(
     host: Host,
     onPairClick: (Host) -> Unit,
+    onWakeClick: (Host) -> Unit,
+    onResumeClick: (Host) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -163,29 +179,90 @@ private fun HostCardFooter(
     ) {
         HostStatusBadge(state = host.state)
 
-        if (host.pairState == PairState.NOT_PAIRED) {
-            Button(
-                onClick = { onPairClick(host) },
-                contentPadding = ButtonDefaults.TextButtonContentPadding,
-                modifier = Modifier.height(32.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (host.state == HostState.OFFLINE &&
+                host.pairState == PairState.PAIRED &&
+                !host.macAddress.isNullOrBlank()
             ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Pair",
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                WakeHostButton(onClick = { onWakeClick(host) })
+            }
+
+            if (host.currentGameId != 0 && host.pairState == PairState.PAIRED) {
+                ResumeStreamButton(onClick = { onResumeClick(host) })
+            }
+
+            if (host.pairState == PairState.NOT_PAIRED) {
+                PairHostButton(onClick = { onPairClick(host) })
             }
         }
     }
 }
 
 @Composable
-private fun HostActiveGameBadge(gameId: Int) {
+private fun WakeHostButton(onClick: () -> Unit) {
+    FilledTonalButton(
+        onClick = onClick,
+        contentPadding = ButtonDefaults.TextButtonContentPadding,
+        modifier = Modifier
+            .height(32.dp)
+            .sunbeamFocusable(),
+    ) {
+        Icon(
+            imageVector = Icons.Default.PowerSettingsNew,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = "Wake", style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun ResumeStreamButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        contentPadding = ButtonDefaults.TextButtonContentPadding,
+        modifier = Modifier
+            .height(32.dp)
+            .sunbeamFocusable(),
+    ) {
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = "Resume", style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun PairHostButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        contentPadding = ButtonDefaults.TextButtonContentPadding,
+        modifier = Modifier
+            .height(32.dp)
+            .sunbeamFocusable(),
+    ) {
+        Icon(
+            imageVector = Icons.Default.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = "Pair", style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun HostActiveGameBadge(
+    gameId: Int,
+    gameTitle: String? = null,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.PlayArrow,
@@ -195,7 +272,7 @@ private fun HostActiveGameBadge(gameId: Int) {
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = "Active Game (ID: $gameId)",
+            text = gameTitle?.ifBlank { null } ?: "Active Game (ID: $gameId)",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium,

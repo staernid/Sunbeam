@@ -31,10 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayPosition
 import io.github.staernid.sunbeam.features.stream.model.PerformanceStats
@@ -97,8 +100,10 @@ private fun LiteHud(
 ) {
     Surface(
         modifier = modifier
+            .sunbeamFocusable(shape = RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
+            .semantics { contentDescription = "Performance HUD" }
             .testTag("stream_hud_lite"),
         color = Color(0xCC1E1E1E),
         contentColor = Color.White,
@@ -195,7 +200,9 @@ private fun ExpandedHud(
                 )
                 IconButton(
                     onClick = onClose,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .sunbeamFocusable(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,

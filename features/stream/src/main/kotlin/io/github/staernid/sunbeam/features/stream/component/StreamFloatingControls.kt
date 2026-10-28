@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 
 /**
  * Floating action controls for in-stream menu and pan/zoom toggling.
@@ -61,6 +62,7 @@ fun StreamFloatingControls(
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
                     modifier = Modifier
                         .size(42.dp)
+                        .sunbeamFocusable(shape = CircleShape)
                         .testTag("stream_floating_menu_button"),
                 ) {
                     Icon(
@@ -92,6 +94,7 @@ fun StreamFloatingControls(
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
                     modifier = Modifier
                         .size(42.dp)
+                        .sunbeamFocusable(shape = CircleShape)
                         .testTag("stream_floating_zoom_button"),
                 ) {
                     Icon(

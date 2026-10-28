@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 
 /**
  * Transient warning banner for unstable network conditions or high packet loss.
@@ -72,7 +73,9 @@ fun StreamConnectionBanner(
                         )
                         IconButton(
                             onClick = onDismiss,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .sunbeamFocusable(),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,

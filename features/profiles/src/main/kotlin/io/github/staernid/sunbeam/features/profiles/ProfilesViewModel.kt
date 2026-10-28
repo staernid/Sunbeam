@@ -13,7 +13,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.staernid.sunbeam.core.data.model.Profile
 import io.github.staernid.sunbeam.core.data.repository.ProfileRepository
+import io.github.staernid.sunbeam.core.preferences.PreferencesRepository
+import io.github.staernid.sunbeam.features.profiles.component.reduceKeyEvent
+import io.github.staernid.sunbeam.features.profiles.component.reduceMotionEvent
 import io.github.staernid.sunbeam.features.profiles.model.GamepadButton
+import io.github.staernid.sunbeam.features.profiles.model.GamepadDebugState
 import io.github.staernid.sunbeam.features.profiles.model.GamepadDeviceInfo
 import io.github.staernid.sunbeam.features.profiles.model.bitrateKbps
 import io.github.staernid.sunbeam.features.profiles.model.copyWithOptions
@@ -31,18 +35,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * Presenter for Profile management, Gamepad input testing, and On-Screen Controller preview.
  */
 class ProfilesViewModel(
     private val profileRepository: ProfileRepository,
+    private val preferencesRepository: PreferencesRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfilesUiState())
     val uiState: StateFlow<ProfilesUiState> = _uiState.asStateFlow()
 
     init {
         observeProfiles()
+        observePreferences()
     }
 
     private fun observeProfiles() {
@@ -60,6 +67,16 @@ class ProfilesViewModel(
                         isLoading = false,
                     )
                 }
+            }
+        }
+    }
+
+    private fun observePreferences() {
+        val repo = preferencesRepository ?: return
+        viewModelScope.launch {
+            repo.settingsFlow.collect { settings ->
+                val normalizedOpacity = (settings.oscOpacity / 100f).coerceIn(0.1f, 1.0f)
+                _uiState.update { it.copy(oscOpacity = normalizedOpacity) }
             }
         }
     }
@@ -194,13 +211,22 @@ class ProfilesViewModel(
 
     // --- Gamepad Debug Operations ---
 
-    fun setConnectedDevices(devices: List<GamepadDeviceInfo>) {
+    fun updateGamepadState(newState: GamepadDebugState) {
+        _uiState.update { it.copy(gamepadDebugState = newState) }
+    }
+
+    fun updateGamepadState(transform: (GamepadDebugState) -> GamepadDebugState) {
         _uiState.update { state ->
-            val debug = state.gamepadDebugState.copy(
+            state.copy(gamepadDebugState = transform(state.gamepadDebugState))
+        }
+    }
+
+    fun setConnectedDevices(devices: List<GamepadDeviceInfo>) {
+        updateGamepadState { debug ->
+            debug.copy(
                 devices = devices,
                 selectedDeviceId = devices.firstOrNull()?.id,
             )
-            state.copy(gamepadDebugState = debug)
         }
     }
 
@@ -212,8 +238,8 @@ class ProfilesViewModel(
         leftTrigger: Float,
         rightTrigger: Float,
     ) {
-        _uiState.update { state ->
-            val debug = state.gamepadDebugState.copy(
+        updateGamepadState { debug ->
+            debug.copy(
                 leftStickX = leftStickX,
                 leftStickY = leftStickY,
                 rightStickX = rightStickX,
@@ -221,7 +247,6 @@ class ProfilesViewModel(
                 leftTrigger = leftTrigger,
                 rightTrigger = rightTrigger,
             )
-            state.copy(gamepadDebugState = debug)
         }
     }
 
@@ -229,11 +254,10 @@ class ProfilesViewModel(
         button: GamepadButton,
         pressed: Boolean,
     ) {
-        _uiState.update { state ->
-            val buttons = state.gamepadDebugState.pressedButtons.toMutableSet()
+        updateGamepadState { debug ->
+            val buttons = debug.pressedButtons.toMutableSet()
             if (pressed) buttons.add(button) else buttons.remove(button)
-            val debug = state.gamepadDebugState.copy(pressedButtons = buttons)
-            state.copy(gamepadDebugState = debug)
+            debug.copy(pressedButtons = buttons)
         }
     }
 
@@ -245,8 +269,8 @@ class ProfilesViewModel(
         accelY: Float,
         accelZ: Float,
     ) {
-        _uiState.update { state ->
-            val debug = state.gamepadDebugState.copy(
+        updateGamepadState { debug ->
+            debug.copy(
                 gyroX = gyroX,
                 gyroY = gyroY,
                 gyroZ = gyroZ,
@@ -254,87 +278,59 @@ class ProfilesViewModel(
                 accelY = accelY,
                 accelZ = accelZ,
             )
-            state.copy(gamepadDebugState = debug)
         }
     }
 
     fun setRumbleStrength(strength: Float) {
-        _uiState.update { state ->
-            val debug = state.gamepadDebugState.copy(rumbleStrength = strength.coerceIn(0f, 1f))
-            state.copy(gamepadDebugState = debug)
+        updateGamepadState { debug ->
+            debug.copy(rumbleStrength = strength.coerceIn(0f, 1f))
         }
     }
 
     fun setRumbleActive(active: Boolean) {
-        _uiState.update { state ->
-            val debug = state.gamepadDebugState.copy(isRumbling = active)
-            state.copy(gamepadDebugState = debug)
+        updateGamepadState { debug ->
+            debug.copy(isRumbling = active)
         }
     }
 
     fun setOscOpacity(opacity: Float) {
-        _uiState.update { it.copy(oscOpacity = opacity.coerceIn(0.1f, 1.0f)) }
+        val clamped = opacity.coerceIn(0.1f, 1.0f)
+        _uiState.update { it.copy(oscOpacity = clamped) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(oscOpacity = (clamped * 100f).roundToInt()) }
+            }
+        }
     }
 
     fun setOscScale(scale: Float) {
         _uiState.update { it.copy(oscScale = scale.coerceIn(0.5f, 2.0f)) }
     }
 
-    fun handleKeyEvent(event: KeyEvent): Boolean {
-        val isDown = event.action == KeyEvent.ACTION_DOWN
-        val button = when (event.keyCode) {
-            KeyEvent.KEYCODE_BUTTON_A -> GamepadButton.A
-            KeyEvent.KEYCODE_BUTTON_B -> GamepadButton.B
-            KeyEvent.KEYCODE_BUTTON_X -> GamepadButton.X
-            KeyEvent.KEYCODE_BUTTON_Y -> GamepadButton.Y
-            KeyEvent.KEYCODE_DPAD_UP -> GamepadButton.DPAD_UP
-            KeyEvent.KEYCODE_DPAD_DOWN -> GamepadButton.DPAD_DOWN
-            KeyEvent.KEYCODE_DPAD_LEFT -> GamepadButton.DPAD_LEFT
-            KeyEvent.KEYCODE_DPAD_RIGHT -> GamepadButton.DPAD_RIGHT
-            KeyEvent.KEYCODE_BUTTON_L1 -> GamepadButton.LB
-            KeyEvent.KEYCODE_BUTTON_R1 -> GamepadButton.RB
-            KeyEvent.KEYCODE_BUTTON_THUMBL -> GamepadButton.LSB
-            KeyEvent.KEYCODE_BUTTON_THUMBR -> GamepadButton.RSB
-            KeyEvent.KEYCODE_BUTTON_START -> GamepadButton.START
-            KeyEvent.KEYCODE_BUTTON_SELECT -> GamepadButton.BACK
-            KeyEvent.KEYCODE_BUTTON_MODE -> GamepadButton.GUIDE
-            else -> null
-        } ?: return false
+    fun resetOscLayout() {
+        _uiState.update {
+            it.copy(
+                oscOpacity = 0.9f,
+                oscScale = 1.0f,
+                userFeedbackMessage = "On-screen controls layout reset to default",
+            )
+        }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(oscOpacity = 90) }
+            }
+        }
+    }
 
-        setButtonPressed(button, isDown)
+    fun handleKeyEvent(event: KeyEvent): Boolean {
+        val updated = reduceKeyEvent(_uiState.value.gamepadDebugState, event) ?: return false
+        updateGamepadState(updated)
         return true
     }
 
     fun handleMotionEvent(event: MotionEvent): Boolean {
-        val lx = event.getAxisValue(MotionEvent.AXIS_X)
-        val ly = event.getAxisValue(MotionEvent.AXIS_Y)
-        val rx = event.getAxisValue(MotionEvent.AXIS_Z)
-        val ry = event.getAxisValue(MotionEvent.AXIS_RZ)
-        val lt = maxOf(
-            event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
-            event.getAxisValue(MotionEvent.AXIS_BRAKE),
-        )
-        val rt = maxOf(
-            event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
-            event.getAxisValue(MotionEvent.AXIS_GAS),
-        )
-
-        updateAxes(
-            leftStickX = lx,
-            leftStickY = ly,
-            rightStickX = rx,
-            rightStickY = ry,
-            leftTrigger = lt.coerceIn(0f, 1f),
-            rightTrigger = rt.coerceIn(0f, 1f),
-        )
-
-        val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-        val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-        setButtonPressed(GamepadButton.DPAD_LEFT, hatX < -0.5f)
-        setButtonPressed(GamepadButton.DPAD_RIGHT, hatX > 0.5f)
-        setButtonPressed(GamepadButton.DPAD_UP, hatY < -0.5f)
-        setButtonPressed(GamepadButton.DPAD_DOWN, hatY > 0.5f)
-
+        val updated = reduceMotionEvent(_uiState.value.gamepadDebugState, event)
+        updateGamepadState(updated)
         return true
     }
 }

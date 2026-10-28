@@ -158,6 +158,22 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `applyPreset updates resolution, fps, bitrate, and framePacing`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.applyPreset(StreamQualityPreset.LOW_LATENCY)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(StreamQualityPreset.LOW_LATENCY, state.activePreset)
+        assertEquals(1920, state.settings.width)
+        assertEquals(1080, state.settings.height)
+        assertEquals(120, state.settings.fps)
+        assertEquals(25000, state.settings.bitrateKbps)
+        assertEquals(FramePacingMode.MIN_LATENCY, state.settings.framePacing)
+    }
+
+    @Test
     fun `resetToDefaults resets settings and posts user message`() = runTest(testDispatcher) {
         advanceUntilIdle()
 

@@ -1,15 +1,9 @@
-@file:Suppress(
-    "TooGenericExceptionCaught",
-    "SwallowedException",
-)
-
 package io.github.staernid.sunbeam.features.apps.component
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,26 +23,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import io.github.staernid.sunbeam.core.data.model.HostApp
 import io.github.staernid.sunbeam.core.designsystem.component.SunbeamCard
 import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val POSTER_ASPECT_RATIO = 0.72f
@@ -63,12 +56,16 @@ fun AppCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     SunbeamCard(
         modifier = modifier
             .fillMaxWidth()
-            .sunbeamFocusable()
+            .sunbeamFocusable(interactionSource = interactionSource)
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick,
             ),
@@ -114,29 +111,31 @@ private fun BoxArtView(
     title: String,
     modifier: Modifier = Modifier,
 ) {
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = boxArtPath) {
-        value = withContext(Dispatchers.IO) {
-            boxArtPath?.let { path ->
-                try {
-                    val file = File(path)
-                    if (file.exists() && file.length() > 0) {
-                        BitmapFactory.decodeFile(path)?.asImageBitmap()
-                    } else {
-                        null
-                    }
-                } catch (_: Exception) {
-                    null
-                }
-            }
-        }
+    val file = remember(boxArtPath) {
+        boxArtPath?.let { File(it) }?.takeIf { it.exists() && it.length() > 0 }
     }
 
-    if (bitmap != null) {
-        Image(
-            bitmap = bitmap!!,
+    if (file != null) {
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(file)
+                .crossfade(true)
+                .build(),
             contentDescription = title,
             contentScale = ContentScale.Crop,
             modifier = modifier.fillMaxSize(),
+            loading = {
+                AppPlaceholder(
+                    title = title,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
+            error = {
+                AppPlaceholder(
+                    title = title,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
         )
     } else {
         AppPlaceholder(

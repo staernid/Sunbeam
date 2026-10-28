@@ -1,4 +1,4 @@
-@file:Suppress("LongParameterList", "LongMethod")
+@file:Suppress("LongParameterList", "LongMethod", "UnusedParameter")
 
 package io.github.staernid.sunbeam.features.stream
 
@@ -11,16 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.staernid.sunbeam.features.stream.component.StreamConnectionBanner
-import io.github.staernid.sunbeam.features.stream.component.StreamFloatingControls
-import io.github.staernid.sunbeam.features.stream.component.StreamMenuDialog
-import io.github.staernid.sunbeam.features.stream.component.StreamMouseModeDialog
-import io.github.staernid.sunbeam.features.stream.component.StreamOverlayHud
-import io.github.staernid.sunbeam.features.stream.component.StreamQuitConfirmDialog
-import io.github.staernid.sunbeam.features.stream.component.StreamSpecialKeysDialog
+import io.github.staernid.sunbeam.features.stream.component.StreamOverlayLayer
 import io.github.staernid.sunbeam.features.stream.component.StreamSurface
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
-import io.github.staernid.sunbeam.features.stream.model.StreamDialog
 
 /**
  * Main stream composable integrating the video [SurfaceView] layer, performance HUD,
@@ -87,8 +80,8 @@ fun StreamContent(
     onConfirmQuit: () -> Unit,
     onToggleKeyboard: () -> Unit,
     onToggleZoomMode: () -> Unit,
-    onOpenMouseModePicker: () -> Unit,
-    onOpenSpecialKeysPicker: () -> Unit,
+    onOpenMouseModePicker: () -> Unit = {},
+    onOpenSpecialKeysPicker: () -> Unit = {},
     onTogglePerfHud: () -> Unit,
     onToggleVirtualController: () -> Unit,
     onSelectMouseMode: (io.github.staernid.sunbeam.features.stream.model.StreamMouseMode) -> Unit,
@@ -114,70 +107,24 @@ fun StreamContent(
             virtualControlsContent()
         }
 
-        // Performance diagnostics HUD
-        if (!uiState.isInPiP) {
-            StreamOverlayHud(
-                stats = uiState.perfStats,
-                mode = uiState.perfOverlayMode,
-                position = uiState.perfOverlayPosition,
-                onHudClick = onHudClick,
-                onCloseClick = onCloseExpandedHud,
-            )
-
-            // Connection warning banner
-            StreamConnectionBanner(
-                warningMessage = uiState.connectionWarning,
-                onDismiss = onDismissWarning,
-            )
-
-            // Floating action controls (Menu button & Zoom toggle)
-            StreamFloatingControls(
-                isMenuButtonVisible = uiState.isFloatingMenuButtonVisible,
-                isZoomButtonVisible = uiState.isFloatingZoomButtonVisible,
-                isPanZoomMode = uiState.isPanZoomMode,
-                onMenuClick = onMenuClick,
-                onZoomClick = onZoomClick,
-            )
-        }
-
-        // In-stream active dialogs
-        when (uiState.activeDialog) {
-            StreamDialog.NONE -> Unit
-            StreamDialog.MAIN_MENU -> {
-                StreamMenuDialog(
-                    isPanZoomMode = uiState.isPanZoomMode,
-                    isVirtualControllerEnabled = uiState.isVirtualControllerEnabled,
-                    onDisconnect = onDisconnect,
-                    onOpenQuitConfirm = onOpenQuitConfirm,
-                    onToggleKeyboard = onToggleKeyboard,
-                    onToggleZoomMode = onToggleZoomMode,
-                    onOpenMouseModePicker = onOpenMouseModePicker,
-                    onOpenSpecialKeysPicker = onOpenSpecialKeysPicker,
-                    onTogglePerfHud = onTogglePerfHud,
-                    onToggleVirtualController = onToggleVirtualController,
-                    onDismiss = onDismissDialog,
-                )
-            }
-            StreamDialog.CONFIRM_QUIT -> {
-                StreamQuitConfirmDialog(
-                    onConfirm = onConfirmQuit,
-                    onDismiss = onDismissDialog,
-                )
-            }
-            StreamDialog.MOUSE_MODE_PICKER -> {
-                StreamMouseModeDialog(
-                    selectedMode = uiState.selectedMouseMode,
-                    onSelectMode = onSelectMouseMode,
-                    onDismiss = onDismissDialog,
-                )
-            }
-            StreamDialog.SPECIAL_KEYS_PICKER -> {
-                StreamSpecialKeysDialog(
-                    shortcuts = uiState.shortcuts,
-                    onSendShortcut = onSendShortcut,
-                    onDismiss = onDismissDialog,
-                )
-            }
-        }
+        // Performance diagnostics HUD, warning banners, floating controls, and dialogs / drawer
+        StreamOverlayLayer(
+            uiState = uiState,
+            onMenuClick = onMenuClick,
+            onZoomClick = onZoomClick,
+            onHudClick = onHudClick,
+            onCloseExpandedHud = onCloseExpandedHud,
+            onDismissWarning = onDismissWarning,
+            onDisconnect = onDisconnect,
+            onOpenQuitConfirm = onOpenQuitConfirm,
+            onConfirmQuit = onConfirmQuit,
+            onToggleKeyboard = onToggleKeyboard,
+            onToggleZoomMode = onToggleZoomMode,
+            onTogglePerfHud = onTogglePerfHud,
+            onToggleVirtualController = onToggleVirtualController,
+            onSelectMouseMode = onSelectMouseMode,
+            onSendShortcut = onSendShortcut,
+            onDismissDialog = onDismissDialog,
+        )
     }
 }

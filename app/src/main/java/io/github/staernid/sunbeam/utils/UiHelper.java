@@ -22,7 +22,6 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import io.github.staernid.sunbeam.AppView;
 import io.github.staernid.sunbeam.Game;
 import io.github.staernid.sunbeam.LimeLog;
 import io.github.staernid.sunbeam.R;

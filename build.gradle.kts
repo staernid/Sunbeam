@@ -3,8 +3,11 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.metro) apply false
+    alias(libs.plugins.roborazzi) apply false
 }
 
 // Aggregate all variant/unit tests under the root `test` task
