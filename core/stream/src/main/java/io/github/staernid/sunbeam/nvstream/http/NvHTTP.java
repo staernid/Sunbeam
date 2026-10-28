@@ -44,12 +44,12 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import io.github.staernid.sunbeam.BuildConfig;
+import android.os.Build;
+
 import io.github.staernid.sunbeam.LimeLog;
 import io.github.staernid.sunbeam.nvstream.ConnectionContext;
 import io.github.staernid.sunbeam.nvstream.http.PairingManager.PairState;
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge;
-import io.github.staernid.sunbeam.utils.DeviceUtils;
 
 import okhttp3.ConnectionPool;
 import okhttp3.HttpUrl;
@@ -72,8 +72,7 @@ public class NvHTTP {
     public static final int LONG_CONNECTION_TIMEOUT = 5000;
     public static final int READ_TIMEOUT = 7000;
 
-    // Print URL and content to logcat on debug builds
-    private static boolean verbose = BuildConfig.DEBUG;
+    private static boolean verbose = false;
 
     private HttpUrl baseUrlHttp;
 
@@ -208,7 +207,7 @@ public class NvHTTP {
     public NvHTTP(ComputerDetails.AddressTuple address, int httpsPort, String uniqueId, X509Certificate serverCert, LimelightCryptoProvider cryptoProvider) throws IOException {
         this.uniqueId = uniqueId;
 
-        this.deviceName = DeviceUtils.getModel();
+        this.deviceName = Build.MODEL != null ? Build.MODEL.trim().replaceAll("\\s*", "") : "Sunbeam";
 
         this.serverCert = serverCert;
 

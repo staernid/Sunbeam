@@ -28,6 +28,7 @@ import io.github.staernid.sunbeam.stream.controls.VirtualControlsManager;
 import androidx.annotation.NonNull;
 import io.github.staernid.sunbeam.nvstream.NvConnection;
 import io.github.staernid.sunbeam.stream.DefaultStreamConnectivityDriver;
+import io.github.staernid.sunbeam.stream.StreamDisplayCoordinator;
 import io.github.staernid.sunbeam.stream.StreamErrorResolver;
 import io.github.staernid.sunbeam.stream.StreamIntentParser;
 import io.github.staernid.sunbeam.stream.StreamLifecycleListener;
@@ -169,13 +170,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private StreamLifecycleManager lifecycleManager;
     private SpinnerDialog spinner;
     public boolean connected = false;
-    private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
     private int suppressPipRefCount = 0;
     private String pcName;
     private String appName;
     private NvApp app;
-    private float desiredRefreshRate;
 
     private InputCaptureProvider inputCaptureProvider;
     private KeyboardInputHandler keyboardInputHandler;
@@ -184,6 +183,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private boolean cursorVisible = false;
     private boolean isPanZoomMode = false;
     private StreamContainer streamContainer;
+    private StreamDisplayCoordinator displayCoordinator;
 
     private boolean quitOnStop = false;
     private StreamOverlayManager overlayManager;
@@ -249,27 +249,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public boolean allowChangeMouseMode = true;
     private boolean onExternelDisplay = false;
 
-    // Queue for batching commitText payloads
-    private static final int UTF8_CHUNK_SIZE = 512;
-    private final Queue<String> commitTextQueue = new ArrayDeque<>();
-    private final Handler commitTextHandler = new Handler(Looper.getMainLooper());
-
-    private final Runnable flushCommitTextQueue = new Runnable() {
-        @Override
-        public void run() {
-            if (commitTextQueue.isEmpty()) {
-                return;
-            }
-            String chunk = commitTextQueue.poll();
-            if (conn != null) {
-                conn.sendUtf8Text(chunk);
-            }
-            if (!commitTextQueue.isEmpty()) {
-                commitTextHandler.postDelayed(this, 15);
-            }
-        }
-    };
-
     @SuppressLint({"MissingInflatedId", "ClickableViewAccessibility"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -310,6 +289,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         // Inflate the content
         setContentView(R.layout.activity_game);
+        streamContainer = findViewById(R.id.streamContainer);
+        displayCoordinator = new StreamDisplayCoordinator(this, prefConfig, streamContainer);
 
         // Start the spinner
         spinner = SpinnerDialog.displayDialog(this, getResources().getString(R.string.conn_establishing_title),
@@ -359,31 +340,15 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             displayHeight = shouldInvertDecoderResolution ? prefConfig.width : prefConfig.height;
 
             // Enter landscape unless we're on a square screen
-            setPreferredOrientationForActivity();
+            displayCoordinator.setPreferredOrientationForActivity(currentOrientation, displayWidth, displayHeight);
         }
 
-
-        if (
-                prefConfig.videoScaleMode == PreferenceConfiguration.ScaleMode.STRETCH ||
-                        shouldIgnoreInsetsForResolution(displayWidth, displayHeight)
-        ) {
-            // Allow the activity to layout under notches if the fill-screen option
-            // was turned on by the user or it's a full-screen native resolution
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                getWindow().getAttributes().layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-            }
-            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                getWindow().getAttributes().layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            }
-        }
+        displayCoordinator.applyWindowCutoutMode(displayWidth, displayHeight);
 
         //光标是否显示
         cursorVisible = prefConfig.enableMouseLocalCursor;
 
         // Listen for non-touch events on the game surface
-        streamContainer = findViewById(R.id.streamContainer);
         streamContainer.init(this, prefConfig);
         streamContainer.setOnGenericMotionListener(this);
         streamContainer.setOnKeyListener(this);
@@ -515,37 +480,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         MediaCodecHelper.initialize(this, glPrefs.glRenderer);
 
         // Check if the user has enabled HDR
-        boolean willStreamHdr = false;
-        if (prefConfig.enableHdr) {
-            if (onExternelDisplay) {
-                // Enforce HDR on unsupported hardware can still enable 10bit streaming for better quality
-                willStreamHdr = true;
-            } else {
-                // Start our HDR checklist
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    Display.HdrCapabilities hdrCaps = currentDisplay.getHdrCapabilities();
-
-                    // We must now ensure our display is compatible with HDR10
-                    if (hdrCaps != null) {
-                        // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
-                        for (int hdrType : hdrCaps.getSupportedHdrTypes()) {
-                            if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
-                                willStreamHdr = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!willStreamHdr) {
-                        // Nope, no HDR for us :(
-                        Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show();
-                    }
-                }
-                else {
-                    Toast.makeText(this, "HDR requires Android 7.0 or later", Toast.LENGTH_LONG).show();
-                }
-            }
-        }
+        boolean willStreamHdr = displayCoordinator.resolveHdrSupport(currentDisplay, onExternelDisplay);
 
         decoderRenderer = new MediaCodecDecoderRenderer(
                 this,
@@ -568,69 +503,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 glPrefs.glRenderer,
                 this);
 
-// --- Force tight thresholds (prefConfig.forceTightThresholds) ---
-        try {
-            boolean forceTight = false;
-            if (prefConfig != null) {
-                try {
-                    java.lang.reflect.Field f = prefConfig.getClass().getDeclaredField("forceTightThresholds");
-                    f.setAccessible(true);
-                    Object v = f.get(prefConfig);
-                    if (v instanceof Boolean) forceTight = (Boolean) v;
-                } catch (Throwable ignored) {}
-            }
-            try { decoderRenderer.setForceTightThresholds(forceTight); } catch (Throwable ignored) {}
-            if (forceTight) {
-                LimeLog.info("ForceTightThresholds enabled: using vsync-based thresholds on all devices");
-            }
-        } catch (Throwable ignored) {}
-
-// --- latency profile selection ---
-        try {
-            if (prefConfig != null && prefConfig.preferLowerDelays) {
-                // Intermediate: more responsive than Balanced but not 0 µs
-                decoderRenderer.setPreferLowerDelays(true);
-                decoderRenderer.setPreferLowerDelaysTimeoutUs(500);  // 0.5 ms
-                prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                LimeLog.info("PreferLowerDelays: preferLowerDelays=true, timeout=500us, pacing=BALANCED");
-            } else {
-                // Balanced default
-                decoderRenderer.setPreferLowerDelays(false);
-                decoderRenderer.setPreferLowerDelaysTimeoutUs(2000); // 2 ms
-                prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                LimeLog.info("Balanced: preferLowerDelays=false, timeout=2000us, pacing=BALANCED");
-            }
-        } catch (Throwable ignored) {}
-
-// Don't stream HDR if the decoder can't support it
-        if (willStreamHdr && !decoderRenderer.isHevcMain10Hdr10Supported() && !decoderRenderer.isAv1Main10Supported()) {
-            willStreamHdr = false;
-            Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show();
-        }
-        // Display a message to the user if HEVC was forced on but we still didn't find a decoder
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC && !decoderRenderer.isHevcSupported()) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show();
-        }
-
-        // Display a message to the user if AV1 was forced on but we still didn't find a decoder
-        if (prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 && !decoderRenderer.isAv1Supported()) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show();
-        }
-
-        // H.264 is always supported
-        int supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264;
-        if (decoderRenderer.isHevcSupported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265;
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_H265_MAIN10;
-            }
-        }
-        if (decoderRenderer.isAv1Supported()) {
-            supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN8;
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
-                supportedVideoFormats |= MoonBridge.VIDEO_FORMAT_AV1_MAIN10;
-            }
-        }
+        int supportedVideoFormats =
+                displayCoordinator.configureDecoderAndResolveVideoFormats(decoderRenderer, willStreamHdr);
 
         int gamepadMask = ControllerHandler.getAttachedControllerMask(this);
         if (!prefConfig.multiController) {
@@ -645,34 +519,11 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
 
         // Set to the optimal mode for streaming
-        float displayRefreshRate = prepareDisplayForRendering(currentDisplay);
+        float displayRefreshRate =
+                displayCoordinator.prepareDisplayForRendering(currentDisplay, displayWidth, displayHeight, onExternelDisplay);
         LimeLog.info("Display refresh rate: "+displayRefreshRate);
 
-        // If the user requested frame pacing using a capped FPS, we will need to change our
-        // desired FPS setting here in accordance with the active display refresh rate.
-        int roundedRefreshRate = Math.round(displayRefreshRate);
-        float chosenFrameRate = prefConfig.fps;
-        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
-            if (prefConfig.fps >= roundedRefreshRate) {
-                if (prefConfig.fps > roundedRefreshRate + 3) {
-                    // Use frame drops when rendering above the screen frame rate
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Using drop mode for FPS > Hz");
-                } else if (roundedRefreshRate <= 49) {
-                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-                    LimeLog.info("Bogus refresh rate: " + roundedRefreshRate);
-                }
-                else {
-                    chosenFrameRate = roundedRefreshRate - 1;
-                    LimeLog.info("Adjusting FPS target for screen to " + chosenFrameRate);
-                }
-            }
-        }
-
-        if (prefConfig.framePacingWarpFactor > 0) {
-            chosenFrameRate *= prefConfig.framePacingWarpFactor;
-        }
+        float chosenFrameRate = displayCoordinator.computeStreamFrameRate(displayRefreshRate);
 
         StreamConfiguration config = new StreamConfiguration.Builder()
                 .setResolution(
@@ -844,51 +695,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 overlayManager::isMenuOpen
         );
 
-        //fixed size + pacing without back-pressure on MTK
-        try {
-            View root = findViewById(android.R.id.content);
-            // Niente getIdentifier: troviamo la prima SurfaceView nel layout
-            SurfaceView streamSurfaceView = findFirstSurfaceViewFrom(root);
-
-            if (streamSurfaceView != null) {
-                // Avoid resizes/glitches that break the compositor
-                int vw = (prefConfig != null && prefConfig.width > 0) ? prefConfig.width : displayWidth;
-                int vh = (prefConfig != null && prefConfig.height > 0) ? prefConfig.height : displayHeight;
-                try { streamSurfaceView.getHolder().setFixedSize(vw, vh); } catch (Throwable ignored) {}
-                try { streamSurfaceView.setZOrderOnTop(false); } catch (Throwable ignored) {}
-                try { streamSurfaceView.setZOrderMediaOverlay(false); } catch (Throwable ignored) {}
-
-                // 2) setFrameRate via reflection (compat < 30)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    float displayHz = 60f;
-                    try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                            displayHz = currentDisplay.getMode().getRefreshRate();
-                        } else {
-                            displayHz = currentDisplay.getRefreshRate();
-                        }
-                    } catch (Throwable ignored) {}
-
-                    float targetFps = (prefConfig != null && prefConfig.fps > 0) ? prefConfig.fps : displayHz;
-
-                    boolean isMTKDevice;
-                    try {
-                        String sum = (android.os.Build.MANUFACTURER + " " + android.os.Build.HARDWARE + " " + android.os.Build.BOARD)
-                                .toLowerCase(java.util.Locale.US);
-                        isMTKDevice = sum.contains("mtk") || sum.contains("mediatek");
-                    } catch (Throwable t) { isMTKDevice = false; }
-
-                    int compat = isMTKDevice
-                            ? Surface.FRAME_RATE_COMPATIBILITY_DEFAULT
-                            : Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE;
-
-                    try {
-                        java.lang.reflect.Method m = SurfaceView.class.getMethod("setFrameRate", float.class, int.class);
-                        m.invoke(streamSurfaceView, Math.min(targetFps, displayHz), compat);
-                    } catch (Throwable ignored) {}
-                }
-            }
-        } catch (Throwable ignored) {}
+        displayCoordinator.configureSurfaceViewForDisplay(
+                findViewById(android.R.id.content),
+                currentDisplay,
+                displayWidth,
+                displayHeight
+        );
     }
 
     private void updateZoomButtonAppearance() {
@@ -947,55 +759,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    private void setPreferredOrientationForActivity() {
-        Display display = getActiveDisplay(Game.this, prefConfig);
-
-        // For semi-square displays, we use more complex logic to determine which orientation to use (if any)
-        if (PreferenceConfiguration.isSquarishScreen(display)) {
-            int desiredOrientation = Configuration.ORIENTATION_UNDEFINED;
-
-            // OSC doesn't properly support portrait displays, so don't use it in portrait mode by default
-            if (prefConfig.onscreenController) {
-                desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
-            }
-
-            // For native resolution, we will lock the orientation to the one that matches the specified resolution
-            if (PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)) {
-                if (displayWidth > displayHeight) {
-                    desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
-                }
-                else {
-                    desiredOrientation = Configuration.ORIENTATION_PORTRAIT;
-                }
-            }
-
-            if (desiredOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
-            }
-            else if (desiredOrientation == Configuration.ORIENTATION_PORTRAIT) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-            }
-            else {
-                // If we don't have a reason to lock to portrait or landscape, allow any orientation
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-            }
-        }
-        else {
-            // Lock to current orientation
-            if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
-            } else {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-            }
-        }
-    }
-
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         // Set requested orientation for possible new screen size
-        setPreferredOrientationForActivity();
+        displayCoordinator.setPreferredOrientationForActivity(currentOrientation, displayWidth, displayHeight);
 
         if (controlsManager != null) {
             controlsManager.onConfigurationChanged();
@@ -1039,134 +808,38 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
-    private PictureInPictureParams getPictureInPictureParams(boolean autoEnter) {
-        View view;
-        Rect hint;
-        if (prefConfig.videoScaleMode == PreferenceConfiguration.ScaleMode.FIT && streamContainer.getScaleX() == 1) {
-            view = streamContainer;
-        } else {
-            view = (View)rootView;
-        }
-
-        int[] viewLocation = new int[2];
-
-        view.getLocationOnScreen(viewLocation);
-
-        int left = viewLocation[0];
-        int top = viewLocation[1];
-        int width = view.getWidth();
-        int height = view.getHeight();
-        Rational aspectRatio = new Rational(width, height);
-        hint = new Rect(left, top, left + width, top + height);
-
-        PictureInPictureParams.Builder builder =
-                new PictureInPictureParams.Builder()
-                        .setAspectRatio(aspectRatio)
-                        .setSourceRectHint(hint);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            builder.setAutoEnterEnabled(autoEnter);
-            builder.setSeamlessResizeEnabled(true);
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (appName != null) {
-                builder.setTitle(appName);
-                if (pcName != null) {
-                    builder.setSubtitle(pcName);
-                }
-            }
-            else if (pcName != null) {
-                builder.setTitle(pcName);
-            }
-        }
-
-        return builder.build();
-    }
-
     public void updatePipAutoEnter() {
-        if (!prefConfig.enablePip || isOnExternalDisplay()) {
-            return;
-        }
-
-        boolean autoEnter = connected && suppressPipRefCount == 0;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            setPictureInPictureParams(getPictureInPictureParams(autoEnter));
-        }
-        else {
-            autoEnterPip = autoEnter;
+        if (displayCoordinator != null && rootView instanceof View) {
+            displayCoordinator.updatePipAutoEnter(
+                    connected,
+                    suppressPipRefCount,
+                    isOnExternalDisplay(),
+                    (View) rootView,
+                    appName,
+                    pcName
+            );
         }
     }
 
     public void setMetaKeyCaptureState(boolean enabled) {
-        // Android has native keyboard capture support starting in API 36.1
-        boolean keyboardCaptureSupported = false;
-        try {
-            WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
-            java.lang.reflect.Method setCaptureMethod = windowLayoutParams.getClass().getMethod("setKeyboardCaptureEnabled", boolean.class);
-            setCaptureMethod.invoke(windowLayoutParams, enabled);
-            getWindow().setAttributes(windowLayoutParams);
-            keyboardCaptureSupported = true;
-        } catch (Throwable ignored) {
-        }
-
-        if (!keyboardCaptureSupported) {
-            // This uses custom APIs present on some Samsung devices to allow capture of
-            // meta key events while streaming.
-            try {
-                Class<?> semWindowManager = Class.forName("com.samsung.android.view.SemWindowManager");
-                Method getInstanceMethod = semWindowManager.getMethod("getInstance");
-                Object manager = getInstanceMethod.invoke(null);
-
-                if (manager != null) {
-                    Class<?>[] parameterTypes = new Class<?>[2];
-                    parameterTypes[0] = ComponentName.class;
-                    parameterTypes[1] = boolean.class;
-                    Method requestMetaKeyEventMethod = semWindowManager.getDeclaredMethod("requestMetaKeyEvent", parameterTypes);
-                    requestMetaKeyEventMethod.invoke(manager, this.getComponentName(), enabled);
-                }
-                else {
-                    LimeLog.warning("SemWindowManager.getInstance() returned null");
-                }
-            } catch (ClassNotFoundException ignored) {
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
+        if (displayCoordinator != null) {
+            displayCoordinator.setMetaKeyCaptureState(enabled);
         }
     }
 
     @Override
     public void onUserLeaveHint() {
         super.onUserLeaveHint();
-
-        // PiP is only supported on Oreo and later, and we don't need to manually enter PiP on
-        // Android S and later. On Android R, we will use onPictureInPictureRequested() instead.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            if (autoEnterPip && !isOnExternalDisplay()) {
-                try {
-                    // This has thrown all sorts of weird exceptions on Samsung devices
-                    // running Oreo. Just eat them and close gracefully on leave, rather
-                    // than crashing.
-                    enterPictureInPictureMode(getPictureInPictureParams(false));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+        if (displayCoordinator != null && rootView instanceof View) {
+            displayCoordinator.onUserLeaveHint(isOnExternalDisplay(), (View) rootView, appName, pcName);
         }
     }
 
     @Override
     @TargetApi(Build.VERSION_CODES.R)
     public boolean onPictureInPictureRequested() {
-        // Enter PiP when requested unless we're on Android 12 which supports auto-enter.
-        if (autoEnterPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            enterPictureInPictureMode(getPictureInPictureParams(false));
+        if (displayCoordinator != null && rootView instanceof View) {
+            return displayCoordinator.onPictureInPictureRequested((View) rootView, appName, pcName);
         }
         return true;
     }
@@ -1186,267 +859,13 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         inputCaptureProvider.onWindowFocusChanged(hasFocus);
     }
 
-    private boolean isRefreshRateEqualMatch(float refreshRate) {
-        return refreshRate >= prefConfig.fps &&
-                refreshRate <= prefConfig.fps + 3;
-    }
-
-    private boolean isRefreshRateGoodMatch(float refreshRate) {
-        return refreshRate >= prefConfig.fps &&
-                Math.round(refreshRate) % prefConfig.fps <= 3;
-    }
-
-    private boolean shouldIgnoreInsetsForResolution(int width, int height) {
-        // Never ignore insets for non-native resolutions
-        if (!PreferenceConfiguration.isNativeResolution(width, height)) {
-            return false;
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Display display = getActiveDisplay(Game.this, prefConfig);
-            for (Display.Mode candidate : display.getSupportedModes()) {
-                // Ignore insets if this is an exact match for the display resolution
-                if ((width == candidate.getPhysicalWidth() && height == candidate.getPhysicalHeight()) ||
-                        (height == candidate.getPhysicalWidth() && width == candidate.getPhysicalHeight())) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private boolean mayReduceRefreshRate() {
-        return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
-                prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
-                (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED && prefConfig.reduceRefreshRate);
-    }
-
     public boolean isOnExternalDisplay() {
         return onExternelDisplay;
     }
 
-    private float prepareDisplayForRendering(Display currentDisplay) {
-        WindowManager.LayoutParams windowLayoutParams = getWindow().getAttributes();
-        float displayRefreshRate;
-
-        // On M, we can explicitly set the optimal display mode
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Display.Mode bestMode = currentDisplay.getMode();
-            boolean isNativeResolutionStream = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height);
-            boolean refreshRateIsGood = isRefreshRateGoodMatch(bestMode.getRefreshRate());
-            boolean refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.getRefreshRate());
-
-            LimeLog.info("Current display mode: "+bestMode.getPhysicalWidth()+"x"+
-                    bestMode.getPhysicalHeight()+"x"+bestMode.getRefreshRate());
-
-            for (Display.Mode candidate : currentDisplay.getSupportedModes()) {
-                boolean refreshRateReduced = candidate.getRefreshRate() < bestMode.getRefreshRate();
-                boolean resolutionReduced = candidate.getPhysicalWidth() < bestMode.getPhysicalWidth() ||
-                        candidate.getPhysicalHeight() < bestMode.getPhysicalHeight();
-                boolean resolutionFitsStream = candidate.getPhysicalWidth() >= prefConfig.width &&
-                        candidate.getPhysicalHeight() >= prefConfig.height;
-
-                LimeLog.info("Examining display mode: "+candidate.getPhysicalWidth()+"x"+
-                        candidate.getPhysicalHeight()+"x"+candidate.getRefreshRate());
-
-                if (candidate.getPhysicalWidth() > 4096 && prefConfig.width <= 4096) {
-                    // Avoid resolutions options above 4K to be safe
-                    continue;
-                }
-
-                // On non-4K streams, we force the resolution to never change unless it's above
-                // 60 FPS, which may require a resolution reduction due to HDMI bandwidth limitations,
-                // or it's a native resolution stream.
-                if (prefConfig.width < 3840 && prefConfig.fps <= 60 && !isNativeResolutionStream) {
-                    if (currentDisplay.getMode().getPhysicalWidth() != candidate.getPhysicalWidth() ||
-                            currentDisplay.getMode().getPhysicalHeight() != candidate.getPhysicalHeight()) {
-                        continue;
-                    }
-                }
-
-                // Make sure the resolution doesn't regress unless if it's over 60 FPS
-                // where we may need to reduce resolution to achieve the desired refresh rate.
-                if (resolutionReduced && !(prefConfig.fps > 60 && resolutionFitsStream)) {
-                    continue;
-                }
-
-                if (mayReduceRefreshRate() && refreshRateIsEqual && !isRefreshRateEqualMatch(candidate.getRefreshRate())) {
-                    // If we had an equal refresh rate and this one is not, skip it. In min latency
-                    // mode, we want to always prefer the highest frame rate even though it may cause
-                    // microstuttering.
-                    continue;
-                }
-                else if (refreshRateIsGood) {
-                    // We've already got a good match, so if this one isn't also good, it's not
-                    // worth considering at all.
-                    if (!isRefreshRateGoodMatch(candidate.getRefreshRate())) {
-                        continue;
-                    }
-
-                    if (mayReduceRefreshRate()) {
-                        // User asked for the lowest possible refresh rate, so don't raise it if we
-                        // have a good match already
-                        if (candidate.getRefreshRate() > bestMode.getRefreshRate()) {
-                            continue;
-                        }
-                    }
-                    else {
-                        // User asked for the highest possible refresh rate, so don't reduce it if we
-                        // have a good match already
-                        if (refreshRateReduced) {
-                            continue;
-                        }
-                    }
-                }
-                else if (!isRefreshRateGoodMatch(candidate.getRefreshRate())) {
-                    // We didn't have a good match and this match isn't good either, so just don't
-                    // reduce the refresh rate.
-                    if (refreshRateReduced) {
-                        continue;
-                    }
-                } else {
-                    // We didn't have a good match and this match is good. Prefer this refresh rate
-                    // even if it reduces the refresh rate. Lowering the refresh rate can be beneficial
-                    // when streaming a 60 FPS stream on a 90 Hz device. We want to select 60 Hz to
-                    // match the frame rate even if the active display mode is 90 Hz.
-                }
-
-                bestMode = candidate;
-                refreshRateIsGood = isRefreshRateGoodMatch(candidate.getRefreshRate());
-                refreshRateIsEqual = isRefreshRateEqualMatch(candidate.getRefreshRate());
-            }
-
-            LimeLog.info("Best display mode: "+bestMode.getPhysicalWidth()+"x"+
-                    bestMode.getPhysicalHeight()+"x"+bestMode.getRefreshRate());
-
-            // Only apply new window layout parameters if we've actually changed the display mode
-            if (currentDisplay.getMode().getModeId() != bestMode.getModeId()) {
-                // If we only changed refresh rate and we're on an OS that supports Surface.setFrameRate()
-                // use that instead of using preferredDisplayModeId to avoid the possibility of triggering
-                // bugs that can cause the system to switch from 4K60 to 4K24 on Chromecast 4K.
-                if (prefConfig.enforceDisplayMode ||
-                        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                        currentDisplay.getMode().getPhysicalWidth() != bestMode.getPhysicalWidth() ||
-                        currentDisplay.getMode().getPhysicalHeight() != bestMode.getPhysicalHeight()) {
-                    // Apply the display mode change
-                    windowLayoutParams.preferredDisplayModeId = bestMode.getModeId();
-                    getWindow().setAttributes(windowLayoutParams);
-                }
-                else {
-                    LimeLog.info("Using setFrameRate() instead of preferredDisplayModeId due to matching resolution");
-                }
-            }
-            else {
-                LimeLog.info("Current display mode is already the best display mode");
-            }
-
-            displayRefreshRate = bestMode.getRefreshRate();
-        }
-        // On L, we can at least tell the OS that we want a refresh rate
-        else {
-            float bestRefreshRate = currentDisplay.getRefreshRate();
-            for (float candidate : currentDisplay.getSupportedRefreshRates()) {
-                LimeLog.info("Examining refresh rate: "+candidate);
-
-                if (candidate > bestRefreshRate) {
-                    // Ensure the frame rate stays around 60 Hz for <= 60 FPS streams
-                    if (prefConfig.fps <= 60) {
-                        if (candidate >= 63) {
-                            continue;
-                        }
-                    }
-
-                    bestRefreshRate = candidate;
-                }
-            }
-
-            LimeLog.info("Selected refresh rate: "+bestRefreshRate);
-            windowLayoutParams.preferredRefreshRate = bestRefreshRate;
-            displayRefreshRate = bestRefreshRate;
-
-            // Apply the refresh rate change
-            getWindow().setAttributes(windowLayoutParams);
-        }
-
-        // Until Marshmallow, we can't ask for a 4K display mode, so we'll
-        // need to hint the OS to provide one.
-        boolean aspectRatioMatch = false;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            // We'll calculate whether we need to scale by aspect ratio. If not, we'll use
-            // setFixedSize so we can handle 4K properly. The only known devices that have
-            // >= 4K screens have exactly 4K screens, so we'll be able to hit this good path
-            // on these devices. On Marshmallow, we can start changing to 4K manually but no
-            // 4K devices run 6.0 at the moment.
-            Point screenSize = new Point(0, 0);
-            currentDisplay.getSize(screenSize);
-
-            double screenAspectRatio = ((double)screenSize.y) / screenSize.x;
-            double streamAspectRatio = ((double)displayHeight) / displayWidth;
-            if (Math.abs(screenAspectRatio - streamAspectRatio) < 0.001|| isOnExternalDisplay()) {
-                LimeLog.info("Stream has compatible aspect ratio with output display");
-                aspectRatioMatch = true;
-            }
-        }
-
-        // Don't do setFixedSize since it might not update the view dimensions correctly when entering PiP mode
-        if (!(prefConfig.videoScaleMode == PreferenceConfiguration.ScaleMode.STRETCH || aspectRatioMatch)) {
-            // Set the surface to scale based on the aspect ratio of the stream
-            streamContainer.setDesiredAspectRatio((double)displayWidth / (double)displayHeight);
-            streamContainer.setFillDisplay(prefConfig.videoScaleMode == PreferenceConfiguration.ScaleMode.FILL);
-            LimeLog.info("surfaceChanged-->"+(double)displayWidth / (double)displayHeight);
-            LimeLog.info("scaleMode-->"+prefConfig.videoScaleMode);
-        }
-
-        // Set the desired refresh rate that will get passed into setFrameRate() later
-        desiredRefreshRate = displayRefreshRate;
-
-        if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
-                getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-                || isOnExternalDisplay()) {// TVs may take a few moments to switch refresh rates, and we can probably assume
-            // it will be eventually activated.
-            // external displays cant be compared with displaymanager currents display refreshrate
-            // TODO: Improve this
-            return displayRefreshRate;
-        }
-        else {
-            // Use the lower of the current refresh rate and the selected refresh rate.
-            // The preferred refresh rate may not actually be applied (ex: Battery Saver mode).
-            return Math.min(currentDisplay.getRefreshRate(), displayRefreshRate);
-        }
-    }
-
-    @SuppressLint("InlinedApi")
-    private final Runnable hideSystemUi = new Runnable() {
-        @Override
-        public void run() {
-            // TODO: Do we want to use WindowInsetsController here on R+ instead of
-            // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
-
-            // In multi-window mode on N+, we need to drop our layout flags or we'll
-            // be drawing underneath the system UI.
-            if (!prefConfig.fullScreen || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode())) {
-                Game.this.getWindow().getDecorView().setSystemUiVisibility(
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-            }
-            else {
-                // Use immersive mode
-                Game.this.getWindow().getDecorView().setSystemUiVisibility(
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                                View.SYSTEM_UI_FLAG_FULLSCREEN |
-                                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-            }
-        }
-    };
-
     private void hideSystemUi(int delay) {
-        Handler h = getWindow().getDecorView().getHandler();
-        if (h != null) {
-            h.removeCallbacks(hideSystemUi);
-            h.postDelayed(hideSystemUi, delay);
+        if (displayCoordinator != null) {
+            displayCoordinator.hideSystemUi(delay);
         }
     }
 
@@ -1454,22 +873,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     @TargetApi(Build.VERSION_CODES.N)
     public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
         super.onMultiWindowModeChanged(isInMultiWindowMode);
-
-        // In multi-window, we don't want to use the full-screen layout
-        // flag. It will cause us to collide with the system UI.
-        // This function will also be called for PiP so we can cover
-        // that case here too.
-        if (isInMultiWindowMode) {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            decoderRenderer.notifyVideoBackground();
+        if (displayCoordinator != null && decoderRenderer != null) {
+            displayCoordinator.onMultiWindowModeChanged(isInMultiWindowMode, decoderRenderer);
         }
-        else {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            decoderRenderer.notifyVideoForeground();
-        }
-
-        // Correct the system UI visibility flags
-        hideSystemUi(50);
     }
 
     @Override
@@ -1547,91 +953,22 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
 
         if (conn != null) {
-            int videoFormat = decoderRenderer.getActiveVideoFormat();
-
             if (lifecycleManager != null) {
                 lifecycleManager.setHasDisplayedFailureDialog(true);
             }
             stopConnection();
-            String message = null;
-            String selectedVideoFormat = "";
-
-            int averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency();
-            int averageDecoderLat = decoderRenderer.getAverageDecoderLatency();
-
-            if (averageEndToEndLat > 0) {
-                message = getResources().getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms";
-                if (averageDecoderLat > 0) {
-                    message += " (" + getResources().getString(R.string.conn_client_latency_hw) + " " + averageDecoderLat + " ms)";
-                }
-            } else if (averageDecoderLat > 0) {
-                message = getResources().getString(R.string.conn_hardware_latency) + " " + averageDecoderLat + " ms";
-            }
-
-            // Add the video codec to the post-stream toast
-            selectedVideoFormat += " [";
-
-            if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-                selectedVideoFormat += "H.264";
-            } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-                selectedVideoFormat += "HEVC";
-            } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-                selectedVideoFormat += "AV1";
-            }
-            else {
-                selectedVideoFormat += "UNKNOWN";
-            }
-
-            if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
-                selectedVideoFormat += " HDR";
-            }
-
-            selectedVideoFormat += "]";
-
-            if (message != null) {
-                message += selectedVideoFormat;
-            }
-
-            if (message != null) {
-                if (prefConfig.enableLatencyToast) {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                }
-            }
-
-            // Clear the tombstone count if we terminated normally
-            if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
-                tombstonePrefs.edit()
-                        .putInt("CrashCount", 0)
-                        .putInt("LastNotifiedCrashCount", 0)
-                        .apply();
-            }
-            if(prefConfig.enablePerfLogging && decoderRenderer.performanceWasTracked()) {
-                new PerformanceDataTracker().savePerformanceStatistics(
-                        getBaseContext(),
-                        Build.MODEL,
-                        Build.VERSION.SDK_INT + "",
-                        BuildConfig.VERSION_NAME,
-                        selectedVideoFormat,
-                        decoderRenderer.getMinDecoderLatency(),
-                        decoderRenderer.getMinDecoderLatencyFullLog(),
-                        String.valueOf((prefConfig.bitrate / 1000)),
-                        displayWidth + "x" + displayHeight,
-                        prefConfig.fps + " hz",
-                        decoderRenderer.getAverageDecoderLatency() + " ms",
-                        PreferenceConfiguration.getSelectedFramePacingName(getBaseContext()),
-                        formatCurrentTime(System.currentTimeMillis())
+            if (displayCoordinator != null && decoderRenderer != null) {
+                displayCoordinator.reportPostStreamTelemetry(
+                        decoderRenderer,
+                        tombstonePrefs,
+                        reportedCrash,
+                        displayWidth,
+                        displayHeight
                 );
             }
-
         }
 
         finish();
-    }
-
-    public static String formatCurrentTime(long currentTimeMillis) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        Date date = new Date(currentTimeMillis);
-        return dateFormat.format(date);
     }
 
     private void setInputGrabState(boolean grab) {
@@ -1965,41 +1302,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        float desiredFrameRate;
-
         surfaceCreated = true;
-
-        // Android will pick the lowest matching refresh rate for a given frame rate value, so we want
-        // to report the true FPS value if refresh rate reduction is enabled. We also report the true
-        // FPS value if there's no suitable matching refresh rate. In that case, Android could try to
-        // select a lower refresh rate that avoids uneven pull-down (ex: 30 Hz for a 60 FPS stream on
-        // a display that maxes out at 50 Hz).
-        if (mayReduceRefreshRate() || desiredRefreshRate < prefConfig.fps) {
-            desiredFrameRate = prefConfig.fps;
+        if (displayCoordinator != null) {
+            displayCoordinator.applySurfaceFrameRate(holder);
         }
-        else {
-            // Otherwise, we will pretend that our frame rate matches the refresh rate we picked in
-            // prepareDisplayForRendering(). This will usually be the highest refresh rate that our
-            // frame rate evenly divides into, which ensures the lowest possible display latency.
-            desiredFrameRate = desiredRefreshRate;
-        }
-
-        // Tell the OS about our frame rate to allow it to adapt the display refresh rate appropriately
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // We want to change frame rate even if it's not seamless, since prepareDisplayForRendering()
-            // will not set the display mode on S+ if it only differs by the refresh rate. It depends
-            // on us to trigger the frame rate switch here.
-            holder.getSurface().setFrameRate(desiredFrameRate,
-                    Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
-                    Surface.CHANGE_FRAME_RATE_ALWAYS);
-        }
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            holder.getSurface().setFrameRate(desiredFrameRate,
-                    Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
-        }
-
-        // Disable producer throttling on the underlying surface for reduced latency (triage A9)
-        io.github.staernid.sunbeam.binding.video.SurfaceUtils.setProducerThrottlingEnabled(holder.getSurface(), false);
     }
 
     @Override
@@ -2131,72 +1437,13 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
     public void rotateScreen() {
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            currentOrientation = Configuration.ORIENTATION_PORTRAIT;
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
-        } else {
-            currentOrientation = Configuration.ORIENTATION_LANDSCAPE;
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+        if (displayCoordinator != null) {
+            currentOrientation = displayCoordinator.rotateScreen(currentOrientation);
         }
     }
 
-    /**
-     * Initializes and applies the appropriate mouse mode based on user preferences
-     * and whether the app is running in secondary display mode (such as Samsung DeX).
-     *
-     * Behavior:
-     * - If the app is in secondary display mode:
-     *   - Applies the user's saved mouse mode if it's one of the supported modes:
-     *     "Trackpad Natural", "Trackpad Gaming", or "Disabled".
-     *   - Otherwise, defaults to applying the "Trackpad Natural" mode.
-     *
-     * - If the app is not in secondary display mode:
-     *   - Applies the user's saved mouse mode as is.
-     *
-     * This ensures the correct input mode is applied depending on the environment,
-     * improving compatibility with desktop-like multi-display modes.
-     */
     private void initMouseMode() {
-        String[] mouseModes = getResources().getStringArray(R.array.mouse_mode_names);
-
-        String savedMouseModeIndexStr = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString("mouse_mode_list", "0");
-
-        int savedMouseModeIndex;
-        try {
-            savedMouseModeIndex = Integer.parseInt(savedMouseModeIndexStr);
-        } catch (NumberFormatException e) {
-            savedMouseModeIndex = 0;
-        }
-
-        String savedMouseModeString = (savedMouseModeIndex >= 0 && savedMouseModeIndex < mouseModes.length)
-                ? mouseModes[savedMouseModeIndex]
-                : null;
-
-        String natural = getString(R.string.mouse_mode_track_pad_natural);
-        String gaming = getString(R.string.mouse_mode_track_pad_gaming);
-        String disabled = getString(R.string.mouse_mode_disabled);
-
-        int naturalIndex = 2; //fallback natural mode for secondary screen
-        for (int i = 0; i < mouseModes.length; i++) {
-            if (mouseModes[i].equals(natural)) {
-                naturalIndex = i;
-                break;
-            }
-        }
-        // We only want to temporary override the mouse mode to work with external, but not store it
-        if (isOnExternalDisplay()) {
-            if (savedMouseModeString != null &&
-                    (savedMouseModeString.equals(natural) ||
-                            savedMouseModeString.equals(gaming) ||
-                            savedMouseModeString.equals(disabled))) {
-                applyMouseMode(savedMouseModeIndex);
-            } else {
-                applyMouseMode(naturalIndex);
-            }
-        } else {
-            applyMouseMode(savedMouseModeIndex);
-        }
+        applyMouseMode(StreamMenuCoordinator.resolveInitialMouseMode(this, isOnExternalDisplay()));
     }
 
     /**
@@ -2296,81 +1543,14 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     }
 
 
-    // 设置surfaceView的圆角 setSurfaceviewCorner(UiHelper.dpToPx(this,24));
-    private void setSurfaceviewCorner(final float radius) {
-
-        streamContainer.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, Outline outline) {
-                Rect rect = new Rect();
-                view.getGlobalVisibleRect(rect);
-                int leftMargin = 0;
-                int topMargin = 0;
-                Rect selfRect = new Rect(leftMargin, topMargin, rect.right - rect.left - leftMargin, rect.bottom - rect.top - topMargin);
-                outline.setRoundRect(selfRect, radius);
-            }
-        });
-        streamContainer.setClipToOutline(true);
-    }
-
     @Override
     public boolean handleCommitText(CharSequence text) {
-        if (!prefConfig.enableCommitText || conn == null) {
-            return false;
-        }
-        enqueueCommitText(text.toString());
-        return true;
+        return keyboardInputHandler != null && keyboardInputHandler.handleCommitText(text);
     }
 
     @Override
     public boolean handleDeleteSurroundingText(int beforeLength, int afterLength) {
-        if (!prefConfig.enableCommitText || conn == null) {
-            return false;
-        }
-        // Send backspace events for deleted preceding characters
-        if (beforeLength > 0) {
-            short backspaceCode = keyboardTranslator.translate(KeyEvent.KEYCODE_DEL, 0, -1);
-            for (int i = 0; i < beforeLength; i++) {
-                conn.sendKeyboardInput(backspaceCode, io.github.staernid.sunbeam.nvstream.input.KeyboardPacket.KEY_DOWN, (byte)0, (byte)0);
-                conn.sendKeyboardInput(backspaceCode, io.github.staernid.sunbeam.nvstream.input.KeyboardPacket.KEY_UP, (byte)0, (byte)0);
-            }
-        }
-        return true;
+        return keyboardInputHandler != null &&
+                keyboardInputHandler.handleDeleteSurroundingText(beforeLength, afterLength);
     }
-
-    private void enqueueCommitText(String text) {
-        if (text == null || text.isEmpty()) {
-            return;
-        }
-        byte[] utf8 = text.getBytes(StandardCharsets.UTF_8);
-        int offset = 0;
-        while (offset < utf8.length) {
-            int end = Math.min(offset + UTF8_CHUNK_SIZE, utf8.length);
-            // Ensure we don't cut inside a multi-byte sequence
-            while (end < utf8.length && (utf8[end] & 0xC0) == 0x80) {
-                end--; // step back until we are at start of code point
-            }
-            String chunk = new String(utf8, offset, end - offset, StandardCharsets.UTF_8);
-            commitTextQueue.add(chunk);
-            offset = end;
-        }
-        // Kick off flushing if not already scheduled
-        if (commitTextQueue.size() == 1) {
-            commitTextHandler.post(flushCommitTextQueue);
-        }
-    }
-
-    /** Helper ricorsivo per trovare la prima SurfaceView nel layout corrente */
-    private SurfaceView findFirstSurfaceViewFrom(View v) {
-        if (v instanceof SurfaceView) return (SurfaceView) v;
-        if (v instanceof ViewGroup) {
-            ViewGroup g = (ViewGroup) v;
-            for (int i = 0; i < g.getChildCount(); i++) {
-                SurfaceView found = findFirstSurfaceViewFrom(g.getChildAt(i));
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
 }

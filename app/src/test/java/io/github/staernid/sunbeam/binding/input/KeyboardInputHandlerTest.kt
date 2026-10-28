@@ -283,4 +283,30 @@ class KeyboardInputHandlerTest {
         assertTrue(sender.sentKeys[2].contains("UP"))
         assertTrue(sender.sentKeys[3].contains("UP"))
     }
+
+    @Test
+    fun handleCommitText_chunksMultibyteUtf8Safe() {
+        val prefConfig = PreferenceConfiguration()
+        prefConfig.enableCommitText = true
+        val (handler, sender, _) = createHandler(prefConfig = prefConfig)
+
+        val longText = "a".repeat(510) + "é" + "b".repeat(10)
+        assertTrue(handler.handleCommitText(longText))
+        assertEquals(2, sender.sentText.size)
+        assertEquals(longText, sender.sentText.joinToString(""))
+    }
+
+    @Test
+    fun handleDeleteSurroundingText_sendsBackspaceKeys() {
+        val prefConfig = PreferenceConfiguration()
+        prefConfig.enableCommitText = true
+        val (handler, sender, _) = createHandler(prefConfig = prefConfig)
+
+        assertTrue(handler.handleDeleteSurroundingText(2, 0))
+        assertEquals(4, sender.sentKeys.size)
+        assertTrue(sender.sentKeys[0].contains("DOWN"))
+        assertTrue(sender.sentKeys[1].contains("UP"))
+        assertTrue(sender.sentKeys[2].contains("DOWN"))
+        assertTrue(sender.sentKeys[3].contains("UP"))
+    }
 }

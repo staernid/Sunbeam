@@ -10,6 +10,9 @@ import io.github.staernid.sunbeam.nvstream.input.KeyboardPacket
 import io.github.staernid.sunbeam.nvstream.input.MouseButtonPacket
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration
+import java.nio.charset.StandardCharsets
+import java.util.ArrayDeque
+import java.util.Queue
 
 interface KeyboardPacketSender {
     fun sendKeyboardInput(
@@ -98,12 +101,29 @@ class KeyboardInputHandler(
 
     companion object {
         const val KEY_UP_DELAY_MS = 100L
+        const val COMMIT_TEXT_FLUSH_DELAY_MS = 15L
+        const val UTF8_CHUNK_SIZE = 512
+        private const val UTF8_CONTINUATION_MASK = 0xC0
+        private const val UTF8_CONTINUATION_PREFIX = 0x80
         private const val META_KEY_FALLBACK_CODE: Short = 0x5b
         private const val REQUIRED_SHORTCUT_MODIFIERS =
             KeyboardPacket.MODIFIER_CTRL.toInt() or
                 KeyboardPacket.MODIFIER_ALT.toInt() or
                 KeyboardPacket.MODIFIER_SHIFT.toInt()
     }
+
+    private val commitTextQueue: Queue<String> = ArrayDeque()
+
+    private val flushCommitTextQueue: () -> Unit =
+        object : () -> Unit {
+            override fun invoke() {
+                val chunk = commitTextQueue.poll() ?: return
+                packetSender.sendUtf8Text(chunk)
+                if (commitTextQueue.isNotEmpty()) {
+                    postDelayedAction(COMMIT_TEXT_FLUSH_DELAY_MS, this)
+                }
+            }
+        }
 
     var modifierFlags: Int = 0
         private set
@@ -327,6 +347,53 @@ class KeyboardInputHandler(
                 modifier = (modifier.toInt() and getModifier(key).toInt().inv()).toByte()
                 packetSender.sendKeyboardInput(key, KeyboardPacket.KEY_UP, modifier, 0)
             }
+        }
+    }
+
+    fun handleCommitText(text: CharSequence): Boolean {
+        if (!prefConfig.enableCommitText) {
+            return false
+        }
+        enqueueCommitText(text.toString())
+        return true
+    }
+
+    @Suppress("UnusedParameter")
+    fun handleDeleteSurroundingText(
+        beforeLength: Int,
+        afterLength: Int,
+    ): Boolean {
+        if (!prefConfig.enableCommitText) {
+            return false
+        }
+        if (beforeLength > 0) {
+            val backspaceCode = keyboardTranslator.translate(KeyEvent.KEYCODE_DEL, 0, -1)
+            repeat(beforeLength) {
+                packetSender.sendKeyboardInput(backspaceCode, KeyboardPacket.KEY_DOWN, 0, 0)
+                packetSender.sendKeyboardInput(backspaceCode, KeyboardPacket.KEY_UP, 0, 0)
+            }
+        }
+        return true
+    }
+
+    private fun enqueueCommitText(text: String) {
+        if (text.isEmpty()) {
+            return
+        }
+        val utf8 = text.toByteArray(StandardCharsets.UTF_8)
+        val wasEmpty = commitTextQueue.isEmpty()
+        var offset = 0
+        while (offset < utf8.size) {
+            var end = minOf(offset + UTF8_CHUNK_SIZE, utf8.size)
+            while (end < utf8.size && (utf8[end].toInt() and UTF8_CONTINUATION_MASK) == UTF8_CONTINUATION_PREFIX) {
+                end--
+            }
+            val chunk = String(utf8, offset, end - offset, StandardCharsets.UTF_8)
+            commitTextQueue.add(chunk)
+            offset = end
+        }
+        if (wasEmpty && commitTextQueue.isNotEmpty()) {
+            postDelayedAction(0L, flushCommitTextQueue)
         }
     }
 

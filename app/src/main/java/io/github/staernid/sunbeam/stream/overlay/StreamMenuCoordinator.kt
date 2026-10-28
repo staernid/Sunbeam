@@ -124,4 +124,40 @@ class StreamMenuCoordinator
                 .create()
                 .show()
         }
+
+        fun resolveInitialMouseMode(context: Context): Int =
+            resolveInitialMouseMode(context, isOnExternalDisplay())
+
+        companion object {
+            @JvmStatic
+            fun resolveInitialMouseMode(
+                context: Context,
+                isOnExternalDisplay: Boolean,
+            ): Int {
+                val mouseModes = context.resources.getStringArray(R.array.mouse_mode_names)
+
+                @Suppress("DEPRECATION")
+                val savedMouseModeIndexStr =
+                    PreferenceManager.getDefaultSharedPreferences(context)
+                        .getString("mouse_mode_list", "0") ?: "0"
+
+                val savedMouseModeIndex = savedMouseModeIndexStr.toIntOrNull() ?: 0
+                if (!isOnExternalDisplay) {
+                    return savedMouseModeIndex
+                }
+
+                val savedLabel = mouseModes.getOrNull(savedMouseModeIndex)
+                val natural = context.getString(R.string.mouse_mode_track_pad_natural)
+                val gaming = context.getString(R.string.mouse_mode_track_pad_gaming)
+                val disabled = context.getString(R.string.mouse_mode_disabled)
+
+                val allowedOnExternal = setOf(natural, gaming, disabled)
+                val naturalIndex = mouseModes.indexOfFirst { it == natural }.takeIf { it >= 0 } ?: 2
+                return if (savedLabel != null && savedLabel in allowedOnExternal) {
+                    savedMouseModeIndex
+                } else {
+                    naturalIndex
+                }
+            }
+        }
     }

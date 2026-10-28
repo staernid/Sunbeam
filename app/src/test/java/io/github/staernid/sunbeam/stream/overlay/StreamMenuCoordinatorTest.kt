@@ -120,4 +120,12 @@ class StreamMenuCoordinatorTest {
         dialog?.listView?.performItemClick(dialog.listView.getChildAt(0), 0, 0)
         assertEquals(0, appliedMode)
     }
+
+    @Test
+    fun resolveInitialMouseMode_onExternalDisplay_fallsBackToNaturalMode() {
+        isExternalDisplay = true
+        val coordinator = createCoordinator()
+        val mode = coordinator.resolveInitialMouseMode(context)
+        assertEquals(2, mode)
+    }
 }

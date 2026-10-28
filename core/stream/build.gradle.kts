@@ -8,6 +8,10 @@ android {
 
 dependencies {
     api(project(":core:native"))
+    api(libs.okhttp)
+    implementation(libs.bouncycastle.bcprov)
+    implementation(libs.bouncycastle.bcpkix)
+    implementation(libs.jmdns)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.annotation)
