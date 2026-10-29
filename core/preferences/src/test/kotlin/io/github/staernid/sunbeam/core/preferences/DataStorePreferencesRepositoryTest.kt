@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -50,6 +51,7 @@ class DataStorePreferencesRepositoryTest {
             assertEquals(60, settings.fps)
             assertEquals(10000, settings.bitrateKbps)
             assertEquals(VideoScaleMode.FIT, settings.videoScaleMode)
+            assertFalse(settings.dynamicColor)
         }
 
     @Test

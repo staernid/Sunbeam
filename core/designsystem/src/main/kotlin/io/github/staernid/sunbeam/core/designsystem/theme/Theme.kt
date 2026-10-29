@@ -16,7 +16,7 @@ val LocalOledBlack = staticCompositionLocalOf { false }
 @Composable
 fun SunbeamTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     oledBlack: Boolean = false,
     content: @Composable () -> Unit,
 ) {

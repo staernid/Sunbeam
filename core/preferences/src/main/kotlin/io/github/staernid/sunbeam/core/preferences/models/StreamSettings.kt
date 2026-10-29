@@ -85,5 +85,5 @@ data class StreamSettings(
     val enablePip: Boolean = false,
     val lastSelectedHostUuid: String? = null,
     val oledBlackMode: Boolean = false,
-    val dynamicColor: Boolean = true,
+    val dynamicColor: Boolean = false,
 )

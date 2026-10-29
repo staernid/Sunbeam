@@ -35,8 +35,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Assemble Release APKs
-        run: ./gradlew :app:assembleRelease
+      - name: Assemble Release and Debug APKs
+        run: ./gradlew :app:assembleRelease :app:assembleDebug
 
       - name: Sign or Prepare Release APKs & Checksums
         env:
@@ -75,6 +75,32 @@ jobs:
           cd release-artifacts
           sha256sum *.apk > SHA256SUMS.txt
 
+      - name: Capture curated app screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            apk_path=$(find app/build/outputs/apk/debug -name '*x86_64*debug.apk' -print -quit)
+            test -n "$apk_path"
+            adb install "$apk_path"
+            adb shell wm size 1080x2400
+            adb shell wm density 420
+            mkdir -p release-artifacts/screenshots
+
+            for screen in hosts apps profiles settings; do
+              adb shell am force-stop io.github.staernid.sunbeam.debug
+              adb shell am start -W \
+                -n io.github.staernid.sunbeam.debug/io.github.staernid.sunbeam.ReleaseScreenshotActivity \
+                --es screen "$screen"
+              sleep 2
+              adb exec-out screencap -p > "release-artifacts/screenshots/$screen.png"
+              test -s "release-artifacts/screenshots/$screen.png"
+            done
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -82,3 +108,4 @@ jobs:
           files: |
             release-artifacts/*.apk
             release-artifacts/SHA256SUMS.txt
+            release-artifacts/screenshots/*.png

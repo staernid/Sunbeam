@@ -4,67 +4,55 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-val SunbeamAmberPrimaryDark = Color(0xFFFBBF24)
-val SunbeamAmberOnPrimaryDark = Color(0xFF452B00)
-val SunbeamAmberPrimaryContainerDark = Color(0xFF633F00)
-val SunbeamAmberOnPrimaryContainerDark = Color(0xFFFFDEAC)
+val SunbeamOrangePrimaryDark = Color(0xFFFB923C)
+val SunbeamOrangeOnPrimaryDark = Color(0xFF3B1F0A)
+val SunbeamOrangePrimaryContainerDark = Color(0xFF6E3900)
+val SunbeamOrangeOnPrimaryContainerDark = Color(0xFFFFDCC5)
+val SunbeamNeutralSecondaryDark = Color(0xFFD4D4D8)
+val SunbeamNeutralOnSecondaryDark = Color(0xFF27272A)
+val SunbeamNeutralSecondaryContainerDark = Color(0xFF3F3F46)
+val SunbeamNeutralOnSecondaryContainerDark = Color(0xFFE4E4E7)
 
-val SunbeamCyanSecondaryDark = Color(0xFF38BDF8)
-val SunbeamCyanOnSecondaryDark = Color(0xFF003548)
-val SunbeamCyanSecondaryContainerDark = Color(0xFF004D67)
-val SunbeamCyanOnSecondaryContainerDark = Color(0xFFBAEAFF)
+val SunbeamBackgroundDark = Color(0xFF18181B)
+val SunbeamOnBackgroundDark = Color(0xFFF4F4F5)
+val SunbeamSurfaceDark = Color(0xFF202023)
+val SunbeamOnSurfaceDark = Color(0xFFF4F4F5)
+val SunbeamSurfaceVariantDark = Color(0xFF27272A)
+val SunbeamOnSurfaceVariantDark = Color(0xFFA1A1AA)
+val SunbeamOutlineDark = Color(0xFF3F3F46)
+val SunbeamOutlineVariantDark = Color(0xFF27272A)
 
-val SunbeamCoralTertiaryDark = Color(0xFFFB923C)
-val SunbeamCoralOnTertiaryDark = Color(0xFF4E2600)
-val SunbeamCoralTertiaryContainerDark = Color(0xFF6E3900)
-val SunbeamCoralOnTertiaryContainerDark = Color(0xFFFFDCC5)
+val SunbeamOrangePrimaryLight = Color(0xFFC2410C)
+val SunbeamOrangeOnPrimaryLight = Color(0xFFFFFFFF)
+val SunbeamOrangePrimaryContainerLight = Color(0xFFFFEDD5)
+val SunbeamOrangeOnPrimaryContainerLight = Color(0xFF4E2600)
+val SunbeamNeutralSecondaryLight = Color(0xFF52525B)
+val SunbeamNeutralOnSecondaryLight = Color(0xFFFFFFFF)
+val SunbeamNeutralSecondaryContainerLight = Color(0xFFE4E4E7)
+val SunbeamNeutralOnSecondaryContainerLight = Color(0xFF18181B)
 
-val SunbeamBackgroundDark = Color(0xFF0B0F19)
-val SunbeamOnBackgroundDark = Color(0xFFE2E8F0)
-val SunbeamSurfaceDark = Color(0xFF111827)
-val SunbeamOnSurfaceDark = Color(0xFFE2E8F0)
-val SunbeamSurfaceVariantDark = Color(0xFF1E293B)
-val SunbeamOnSurfaceVariantDark = Color(0xFF94A3B8)
-val SunbeamOutlineDark = Color(0xFF334155)
-val SunbeamOutlineVariantDark = Color(0xFF1E293B)
-
-val SunbeamAmberPrimaryLight = Color(0xFFB45309)
-val SunbeamAmberOnPrimaryLight = Color(0xFFFFFFFF)
-val SunbeamAmberPrimaryContainerLight = Color(0xFFFEF3C7)
-val SunbeamAmberOnPrimaryContainerLight = Color(0xFF452B00)
-
-val SunbeamCyanSecondaryLight = Color(0xFF0284C7)
-val SunbeamCyanOnSecondaryLight = Color(0xFFFFFFFF)
-val SunbeamCyanSecondaryContainerLight = Color(0xFFE0F2FE)
-val SunbeamCyanOnSecondaryContainerLight = Color(0xFF003548)
-
-val SunbeamCoralTertiaryLight = Color(0xFFC2410C)
-val SunbeamCoralOnTertiaryLight = Color(0xFFFFFFFF)
-val SunbeamCoralTertiaryContainerLight = Color(0xFFFFEDD5)
-val SunbeamCoralOnTertiaryContainerLight = Color(0xFF4E2600)
-
-val SunbeamBackgroundLight = Color(0xFFF8FAFC)
-val SunbeamOnBackgroundLight = Color(0xFF0F172A)
+val SunbeamBackgroundLight = Color(0xFFFAFAF9)
+val SunbeamOnBackgroundLight = Color(0xFF18181B)
 val SunbeamSurfaceLight = Color(0xFFFFFFFF)
-val SunbeamOnSurfaceLight = Color(0xFF0F172A)
-val SunbeamSurfaceVariantLight = Color(0xFFF1F5F9)
-val SunbeamOnSurfaceVariantLight = Color(0xFF64748B)
-val SunbeamOutlineLight = Color(0xFFCBD5E1)
-val SunbeamOutlineVariantLight = Color(0xFFE2E8F0)
+val SunbeamOnSurfaceLight = Color(0xFF18181B)
+val SunbeamSurfaceVariantLight = Color(0xFFF4F4F5)
+val SunbeamOnSurfaceVariantLight = Color(0xFF52525B)
+val SunbeamOutlineLight = Color(0xFFD4D4D8)
+val SunbeamOutlineVariantLight = Color(0xFFE4E4E7)
 
 val SunbeamDarkColorScheme = darkColorScheme(
-    primary = SunbeamAmberPrimaryDark,
-    onPrimary = SunbeamAmberOnPrimaryDark,
-    primaryContainer = SunbeamAmberPrimaryContainerDark,
-    onPrimaryContainer = SunbeamAmberOnPrimaryContainerDark,
-    secondary = SunbeamCyanSecondaryDark,
-    onSecondary = SunbeamCyanOnSecondaryDark,
-    secondaryContainer = SunbeamCyanSecondaryContainerDark,
-    onSecondaryContainer = SunbeamCyanOnSecondaryContainerDark,
-    tertiary = SunbeamCoralTertiaryDark,
-    onTertiary = SunbeamCoralOnTertiaryDark,
-    tertiaryContainer = SunbeamCoralTertiaryContainerDark,
-    onTertiaryContainer = SunbeamCoralOnTertiaryContainerDark,
+    primary = SunbeamOrangePrimaryDark,
+    onPrimary = SunbeamOrangeOnPrimaryDark,
+    primaryContainer = SunbeamOrangePrimaryContainerDark,
+    onPrimaryContainer = SunbeamOrangeOnPrimaryContainerDark,
+    secondary = SunbeamNeutralSecondaryDark,
+    onSecondary = SunbeamNeutralOnSecondaryDark,
+    secondaryContainer = SunbeamNeutralSecondaryContainerDark,
+    onSecondaryContainer = SunbeamNeutralOnSecondaryContainerDark,
+    tertiary = SunbeamNeutralSecondaryDark,
+    onTertiary = SunbeamNeutralOnSecondaryDark,
+    tertiaryContainer = SunbeamNeutralSecondaryContainerDark,
+    onTertiaryContainer = SunbeamNeutralOnSecondaryContainerDark,
     background = SunbeamBackgroundDark,
     onBackground = SunbeamOnBackgroundDark,
     surface = SunbeamSurfaceDark,
@@ -84,18 +72,18 @@ val SunbeamOledColorScheme = SunbeamDarkColorScheme.copy(
 )
 
 val SunbeamLightColorScheme = lightColorScheme(
-    primary = SunbeamAmberPrimaryLight,
-    onPrimary = SunbeamAmberOnPrimaryLight,
-    primaryContainer = SunbeamAmberPrimaryContainerLight,
-    onPrimaryContainer = SunbeamAmberOnPrimaryContainerLight,
-    secondary = SunbeamCyanSecondaryLight,
-    onSecondary = SunbeamCyanOnSecondaryLight,
-    secondaryContainer = SunbeamCyanSecondaryContainerLight,
-    onSecondaryContainer = SunbeamCyanOnSecondaryContainerLight,
-    tertiary = SunbeamCoralTertiaryLight,
-    onTertiary = SunbeamCoralOnTertiaryLight,
-    tertiaryContainer = SunbeamCoralTertiaryContainerLight,
-    onTertiaryContainer = SunbeamCoralOnTertiaryContainerLight,
+    primary = SunbeamOrangePrimaryLight,
+    onPrimary = SunbeamOrangeOnPrimaryLight,
+    primaryContainer = SunbeamOrangePrimaryContainerLight,
+    onPrimaryContainer = SunbeamOrangeOnPrimaryContainerLight,
+    secondary = SunbeamNeutralSecondaryLight,
+    onSecondary = SunbeamNeutralOnSecondaryLight,
+    secondaryContainer = SunbeamNeutralSecondaryContainerLight,
+    onSecondaryContainer = SunbeamNeutralOnSecondaryContainerLight,
+    tertiary = SunbeamNeutralSecondaryLight,
+    onTertiary = SunbeamNeutralOnSecondaryLight,
+    tertiaryContainer = SunbeamNeutralSecondaryContainerLight,
+    onTertiaryContainer = SunbeamNeutralOnSecondaryContainerLight,
     background = SunbeamBackgroundLight,
     onBackground = SunbeamOnBackgroundLight,
     surface = SunbeamSurfaceLight,

@@ -39,6 +39,12 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 - ✅ Unit and Roborazzi screenshot tests in CI
 - ⬜ Up-to-date translations from upstream
 
+## Release screenshots
+
+Each tagged release includes curated emulator screenshots of the Hosts, Apps, Profiles, and Settings
+screens as release assets. They use deterministic sample content and can be reviewed and added to
+this README when a release includes UI changes.
+
 ## Build
 
 ```sh
