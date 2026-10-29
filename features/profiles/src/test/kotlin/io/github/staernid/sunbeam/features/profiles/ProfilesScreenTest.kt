@@ -176,7 +176,7 @@ class ProfilesScreenTest {
         }
 
         composeTestRule.onNodeWithText("Virtual Controller Layout Preview").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Reset Layout to Default").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithText("Reset Layout to Default").performScrollTo().assertIsDisplayed().performClick()
         assertTrue(resetInvoked)
         assertNull(prefs.getString("100", null))
     }

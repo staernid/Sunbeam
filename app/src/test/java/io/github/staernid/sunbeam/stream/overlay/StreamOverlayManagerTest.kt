@@ -246,6 +246,35 @@ class StreamOverlayManagerTest {
     }
 
     @Test
+    fun performanceStatsParser_extractsMediaCodecDecoderRendererOutput() {
+        val rendererLog = "Video stream: 2560x1600 120.00 FPS (HEVC Main10)\n" +
+            "Decoder: c2.qti.hevc.decoder\n" +
+            "Rendering frame rate: 119.85 FPS\n" +
+            "Average network latency: 9 ms\n" +
+            "Average decoding time: 1.85 ms\n" +
+            "Frames dropped by your network connection: 0.02%\n" +
+            "Bandwidth: 65000 Kbps"
+
+        val stats = PerformanceStatsParser.parse(rendererLog)
+        assertEquals(119.85f, stats.fps, 0.01f)
+        assertEquals(9, stats.networkLatencyMs)
+        assertEquals(1.85f, stats.decodeLatencyMs, 0.01f)
+        assertEquals(0.02f, stats.packetLossPercentage, 0.01f)
+        assertEquals(65000, stats.bandwidthKbps)
+        assertEquals("HEVC Main10", stats.videoFormat)
+        assertEquals("c2.qti.hevc.decoder", stats.decoderName)
+    }
+
+    @Test
+    fun performanceStatsParser_parsesLiteLogFormat() {
+        // Realistic lite-format string produced by MediaCodecDecoderRenderer when enablePerfOverlayLite=true
+        val liteLog = "60.00 FPS, avg 14ms"
+        val stats = PerformanceStatsParser.parse(liteLog)
+        assertEquals(60.0f, stats.fps, 0.01f)
+        assertEquals(14, stats.networkLatencyMs)
+    }
+
+    @Test
     fun streamOverlayManager_withComposeView_dispatchesStateToViewModel() {
         prefConfig.enablePerfOverlay = true
         prefConfig.enablePerfOverlayLite = true

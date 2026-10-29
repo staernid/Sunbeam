@@ -5,21 +5,26 @@ package io.github.staernid.sunbeam.features.stream.component
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +46,15 @@ import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayPosition
 import io.github.staernid.sunbeam.features.stream.model.PerformanceStats
+
+private val HudGlassSurfaceLite = Color(0x800B0F17)
+private val HudGlassSurfaceExpanded = Color(0xA60B0F17)
+private val HudGlassBorder = Color(0x24FFFFFF)
+private val HudTextPrimary = Color(0xFFF3F4F6)
+private val HudTextSecondary = Color(0xFF9CA3AF)
+private val HudStatusGood = Color(0xFF34D399)
+private val HudStatusWarn = Color(0xFFFBBF24)
+private val HudStatusBad = Color(0xFFF87171)
 
 /**
  * Performance HUD overlay displaying real-time stream diagnostics.
@@ -65,7 +79,7 @@ fun StreamOverlayHud(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = alignment,
     ) {
         AnimatedVisibility(
@@ -98,62 +112,72 @@ private fun LiteHud(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val pillShape = RoundedCornerShape(50)
+    val statusColor = when {
+        stats.packetLossPercentage > 2f || stats.networkLatencyMs > 50 -> HudStatusBad
+        stats.packetLossPercentage > 0.5f || stats.networkLatencyMs > 25 -> HudStatusWarn
+        else -> HudStatusGood
+    }
+
     Surface(
         modifier = modifier
-            .sunbeamFocusable(shape = RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+            .sunbeamFocusable(shape = pillShape)
+            .clip(pillShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = "Performance HUD" }
             .testTag("stream_hud_lite"),
-        color = Color(0xCC1E1E1E),
-        contentColor = Color.White,
-        shape = RoundedCornerShape(8.dp),
+        color = HudGlassSurfaceLite,
+        contentColor = HudTextPrimary,
+        shape = pillShape,
+        border = BorderStroke(1.dp, HudGlassBorder),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(
-                imageVector = Icons.Default.Speed,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.primary,
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(statusColor, CircleShape),
             )
             Text(
                 text = "${stats.formattedFps} FPS",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
+                    color = HudTextPrimary,
                     fontSize = 11.sp,
                 ),
             )
-            Text(text = "•", color = Color.Gray, fontSize = 10.sp)
+            HudPillDivider()
             Text(
                 text = "RTT: ${stats.networkLatencyMs}ms",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = FontFamily.Monospace,
+                    color = HudTextPrimary,
                     fontSize = 11.sp,
                 ),
             )
-            Text(text = "•", color = Color.Gray, fontSize = 10.sp)
+            HudPillDivider()
             Text(
                 text = "Dec: ${stats.formattedDecodeLatency}",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = FontFamily.Monospace,
+                    color = HudTextPrimary,
                     fontSize = 11.sp,
                 ),
             )
-            Text(text = "•", color = Color.Gray, fontSize = 10.sp)
+            HudPillDivider()
             Text(
                 text = "Loss: ${stats.formattedPacketLoss}",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     color = if (stats.packetLossPercentage > 1f) {
-                        MaterialTheme.colorScheme.error
+                        HudStatusBad
                     } else {
-                        Color.White
+                        HudTextPrimary
                     },
                 ),
             )
@@ -162,78 +186,98 @@ private fun LiteHud(
 }
 
 @Composable
+private fun HudPillDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(10.dp)
+            .background(HudGlassBorder),
+    )
+}
+
+@Composable
 private fun ExpandedHud(
     stats: PerformanceStats,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    val cardShape = RoundedCornerShape(14.dp)
+    Surface(
         modifier = modifier
-            .widthIn(max = 380.dp)
+            .widthIn(min = 230.dp, max = 280.dp)
             .testTag("stream_hud_expanded"),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xEE1A1A1A),
-            contentColor = Color.White,
-        ),
-        shape = RoundedCornerShape(12.dp),
+        color = HudGlassSurfaceExpanded,
+        contentColor = HudTextPrimary,
+        shape = cardShape,
+        border = BorderStroke(1.dp, HudGlassBorder),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             Row(
-                modifier = Modifier.padding(bottom = 2.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Default.Speed,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
+                    tint = Color(0xFF60A5FA),
+                    modifier = Modifier.size(15.dp),
                 )
                 Text(
                     text = "Stream Performance",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = HudTextPrimary,
+                        fontSize = 12.sp,
+                    ),
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 8.dp),
+                        .padding(start = 6.dp),
                 )
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(22.dp)
                         .sunbeamFocusable(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Collapse HUD",
-                        tint = Color.LightGray,
-                        modifier = Modifier.size(16.dp),
+                        tint = HudTextSecondary,
+                        modifier = Modifier.size(14.dp),
                     )
                 }
             }
 
+            HorizontalDivider(color = HudGlassBorder, thickness = 0.5.dp)
+
             HudMetricRow(label = "Framerate", value = "${stats.formattedFps} FPS")
-            HudMetricRow(label = "Network Latency (RTT)", value = "${stats.networkLatencyMs} ms")
+            HudMetricRow(
+                label = "Network RTT",
+                value = "${stats.networkLatencyMs} ms",
+                valueColor = if (stats.networkLatencyMs > 40) HudStatusWarn else HudTextPrimary,
+            )
             HudMetricRow(label = "Decode Time", value = stats.formattedDecodeLatency)
             HudMetricRow(
                 label = "Packet Loss",
                 value = stats.formattedPacketLoss,
                 valueColor = if (stats.packetLossPercentage > 1f) {
-                    MaterialTheme.colorScheme.error
+                    HudStatusBad
                 } else {
-                    Color.White
+                    HudTextPrimary
                 },
             )
-            HudMetricRow(label = "Bitrate / Bandwidth", value = stats.formattedBandwidth)
+            HudMetricRow(label = "Bandwidth", value = stats.formattedBandwidth)
             if (stats.videoFormat.isNotEmpty()) {
-                HudMetricRow(label = "Video Codec", value = stats.videoFormat)
+                HudMetricRow(label = "Stream", value = stats.videoFormat)
             }
             if (stats.decoderName.isNotEmpty()) {
-                HudMetricRow(label = "Hardware Decoder", value = stats.decoderName)
+                HudMetricRow(label = "Decoder", value = stats.decoderName)
             }
-            stats.customDetails?.let { details ->
-                HudMetricRow(label = "Details", value = details)
+            stats.customDetails?.takeIf { it.isNotBlank() }?.let { details ->
+                HudMetricRow(label = "Host Latency", value = details)
             }
         }
     }
@@ -244,17 +288,17 @@ private fun HudMetricRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.White,
+    valueColor: Color = HudTextPrimary,
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall.copy(
-                color = Color.LightGray,
+                color = HudTextSecondary,
                 fontSize = 11.sp,
             ),
             modifier = Modifier.weight(1f),

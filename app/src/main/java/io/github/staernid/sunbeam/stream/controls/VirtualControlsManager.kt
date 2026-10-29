@@ -152,13 +152,25 @@ class VirtualControlsManager
         fun isKeyboardLayoutVisible(): Boolean = keyBoardLayoutController?.shown == true
 
         /**
-         * Checks if the virtual gamepad controller is actively being reconfigured (moved or resized).
+         * Checks if the virtual gamepad controller is actively being reconfigured (moved, resized, or toggled).
          */
         fun isVirtualControllerEditing(): Boolean {
             val controller = virtualController ?: return false
             val mode = controller.controllerMode
             return mode == VirtualController.ControllerMode.MoveButtons ||
-                mode == VirtualController.ControllerMode.ResizeButtons
+                mode == VirtualController.ControllerMode.ResizeButtons ||
+                mode == VirtualController.ControllerMode.DisableEnableButtons
+        }
+
+        /**
+         * Starts or advances the interactive layout configuration mode on the virtual controller.
+         */
+        fun cycleVirtualControllerEditMode() {
+            if (virtualController == null) {
+                initVirtualController()
+                prefConfig.onscreenController = true
+            }
+            virtualController?.cycleConfigurationMode()
         }
 
         /**

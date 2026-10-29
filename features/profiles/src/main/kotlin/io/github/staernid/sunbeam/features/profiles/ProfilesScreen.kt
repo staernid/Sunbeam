@@ -82,6 +82,11 @@ fun ProfilesScreen(
     onNavigateBack: (() -> Unit)? = null,
     onUpdateGamepadState: ((GamepadDebugState) -> GamepadDebugState) -> Unit = {},
     onResetOscLayout: () -> Unit = {},
+    onToggleOscEnabled: (Boolean) -> Unit = {},
+    onToggleHideOscWhenHasGamepad: (Boolean) -> Unit = {},
+    onToggleOnlyShowL3R3: (Boolean) -> Unit = {},
+    onToggleShowGuideButton: (Boolean) -> Unit = {},
+    onToggleVibrateOsc: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -158,6 +163,16 @@ fun ProfilesScreen(
                         onOpacityChange = onOscOpacityChange,
                         onScaleChange = onOscScaleChange,
                         onResetLayout = onResetOscLayout,
+                        oscEnabled = uiState.oscEnabled,
+                        hideOscWhenHasGamepad = uiState.hideOscWhenHasGamepad,
+                        onlyShowL3R3 = uiState.onlyShowL3R3,
+                        showGuideButton = uiState.showGuideButton,
+                        vibrateOsc = uiState.vibrateOsc,
+                        onOscEnabledChange = onToggleOscEnabled,
+                        onHideOscWhenHasGamepadChange = onToggleHideOscWhenHasGamepad,
+                        onOnlyShowL3R3Change = onToggleOnlyShowL3R3,
+                        onShowGuideButtonChange = onToggleShowGuideButton,
+                        onVibrateOscChange = onToggleVibrateOsc,
                     )
                 }
             }

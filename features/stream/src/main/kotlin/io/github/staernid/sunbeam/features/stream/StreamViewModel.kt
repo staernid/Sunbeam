@@ -33,9 +33,12 @@ class StreamViewModel : ViewModel() {
     var onQuitAction: (() -> Unit)? = null
     var onSendShortcutAction: ((StreamShortcut) -> Unit)? = null
     var onMouseModeChangedAction: ((StreamMouseMode) -> Unit)? = null
+    var onLocalCursorToggledAction: ((Boolean) -> Unit)? = null
     var onZoomModeToggledAction: ((Boolean) -> Unit)? = null
     var onKeyboardToggledAction: (() -> Unit)? = null
     var onVirtualControllerToggledAction: ((Boolean) -> Unit)? = null
+    var onEditVirtualControllerAction: (() -> Unit)? = null
+    var onPerfOverlayModeChangedAction: ((PerfOverlayMode) -> Unit)? = null
 
     fun toggleMenu() {
         _uiState.update { current ->
@@ -74,17 +77,20 @@ class StreamViewModel : ViewModel() {
     }
 
     fun togglePerfHud() {
+        var updatedMode = PerfOverlayMode.NONE
         _uiState.update { current ->
             val nextMode = when (current.perfOverlayMode) {
                 PerfOverlayMode.NONE -> PerfOverlayMode.LITE
                 PerfOverlayMode.LITE -> PerfOverlayMode.EXPANDED
                 PerfOverlayMode.EXPANDED -> PerfOverlayMode.NONE
             }
+            updatedMode = nextMode
             current.copy(
                 perfOverlayMode = nextMode,
                 isPerfOverlayEnabled = nextMode != PerfOverlayMode.NONE,
             )
         }
+        onPerfOverlayModeChangedAction?.invoke(updatedMode)
     }
 
     fun setPerfOverlayMode(mode: PerfOverlayMode) {
@@ -94,6 +100,7 @@ class StreamViewModel : ViewModel() {
                 isPerfOverlayEnabled = mode != PerfOverlayMode.NONE,
             )
         }
+        onPerfOverlayModeChangedAction?.invoke(mode)
     }
 
     fun setPerfOverlayPosition(position: PerfOverlayPosition) {
@@ -120,6 +127,10 @@ class StreamViewModel : ViewModel() {
         }
     }
 
+    fun setZoomMode(enabled: Boolean) {
+        _uiState.update { it.copy(isPanZoomMode = enabled) }
+    }
+
     fun toggleVirtualController() {
         _uiState.update { current ->
             val newController = !current.isVirtualControllerEnabled
@@ -128,10 +139,35 @@ class StreamViewModel : ViewModel() {
         }
     }
 
+    fun setVirtualControllerEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(isVirtualControllerEnabled = enabled) }
+    }
+
+    fun editVirtualController() {
+        dismissDialog()
+        onEditVirtualControllerAction?.invoke()
+    }
+
+    fun toggleLocalCursor() {
+        _uiState.update { current ->
+            val next = !current.isLocalCursorEnabled
+            onLocalCursorToggledAction?.invoke(next)
+            current.copy(isLocalCursorEnabled = next)
+        }
+    }
+
+    fun setLocalCursorEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(isLocalCursorEnabled = enabled) }
+    }
+
     fun toggleKeyboard() {
         dismissDialog()
         onKeyboardToggledAction?.invoke()
         _uiState.update { it.copy(isKeyboardRequested = !it.isKeyboardRequested) }
+    }
+
+    fun setInitialMouseMode(mode: StreamMouseMode) {
+        _uiState.update { it.copy(selectedMouseMode = mode) }
     }
 
     fun selectMouseMode(mode: StreamMouseMode) {

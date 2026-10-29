@@ -219,38 +219,23 @@ public class AnalogStick extends VirtualControllerElement {
 
     @Override
     protected void onElementDraw(Canvas canvas) {
-        // set transparent background
-        canvas.drawColor(Color.TRANSPARENT);
-
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(getDefaultStrokeWidth());
-
-        // draw outer circle
-        if (!isPressed() || click_state == CLICK_STATE.SINGLE) {
-            paint.setColor(getDefaultColor());
-        } else {
-            paint.setColor(pressedColor);
-        }
-        canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_complete, paint);
-
-        paint.setColor(getDefaultColor());
-        // draw dead zone
-        canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_dead_zone, paint);
-
-        // draw stick depending on state
-        switch (stick_state) {
-            case NO_MOVEMENT: {
-                paint.setColor(getDefaultColor());
-                canvas.drawCircle(getWidth() / 2, getHeight() / 2, radius_analog_stick, paint);
-                break;
-            }
-            case MOVED_IN_DEAD_ZONE:
-            case MOVED_ACTIVE: {
-                paint.setColor(pressedColor);
-                canvas.drawCircle(position_stick_x, position_stick_y, radius_analog_stick, paint);
-                break;
-            }
-        }
+        boolean moved = stick_state == STICK_STATE.MOVED_IN_DEAD_ZONE || stick_state == STICK_STATE.MOVED_ACTIVE;
+        renderer.drawAnalogStick(
+                canvas,
+                getWidth(),
+                getHeight(),
+                getWidth() / 2f,
+                getHeight() / 2f,
+                moved ? position_stick_x : getWidth() / 2f,
+                moved ? position_stick_y : getHeight() / 2f,
+                radius_complete,
+                radius_dead_zone,
+                radius_analog_stick,
+                isPressed(),
+                opacityPercent,
+                virtualController.getControllerMode(),
+                enabled
+        );
     }
 
     private void updatePosition(long eventTime) {

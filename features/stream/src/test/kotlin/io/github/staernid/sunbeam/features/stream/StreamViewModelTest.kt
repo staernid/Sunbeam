@@ -35,7 +35,8 @@ class StreamViewModelTest {
         assertFalse(state.isVirtualControllerEnabled)
         assertEquals(StreamDialog.NONE, state.activeDialog)
         assertNull(state.connectionWarning)
-        assertEquals(StreamMouseMode.TRACKPAD_NATURAL, state.selectedMouseMode)
+        assertEquals(StreamMouseMode.MULTI_TOUCH, state.selectedMouseMode)
+        assertFalse(state.isLocalCursorEnabled)
     }
 
     @Test
@@ -80,19 +81,25 @@ class StreamViewModelTest {
 
     @Test
     fun togglePerfHud_cyclesLiteExpandedNone() {
+        var notifiedMode: PerfOverlayMode? = null
+        viewModel.onPerfOverlayModeChangedAction = { notifiedMode = it }
+
         // Initial state is LITE
         assertEquals(PerfOverlayMode.LITE, viewModel.uiState.value.perfOverlayMode)
 
         viewModel.togglePerfHud()
         assertEquals(PerfOverlayMode.EXPANDED, viewModel.uiState.value.perfOverlayMode)
+        assertEquals(PerfOverlayMode.EXPANDED, notifiedMode)
         assertTrue(viewModel.uiState.value.isPerfOverlayEnabled)
 
         viewModel.togglePerfHud()
         assertEquals(PerfOverlayMode.NONE, viewModel.uiState.value.perfOverlayMode)
+        assertEquals(PerfOverlayMode.NONE, notifiedMode)
         assertFalse(viewModel.uiState.value.isPerfOverlayEnabled)
 
         viewModel.togglePerfHud()
         assertEquals(PerfOverlayMode.LITE, viewModel.uiState.value.perfOverlayMode)
+        assertEquals(PerfOverlayMode.LITE, notifiedMode)
         assertTrue(viewModel.uiState.value.isPerfOverlayEnabled)
     }
 
@@ -173,6 +180,20 @@ class StreamViewModelTest {
         assertEquals(StreamMouseMode.TRACKPAD_GAMING, viewModel.uiState.value.selectedMouseMode)
         assertEquals(StreamDialog.NONE, viewModel.uiState.value.activeDialog)
         assertEquals(StreamMouseMode.TRACKPAD_GAMING, chosenMode)
+    }
+
+    @Test
+    fun toggleLocalCursor_updatesStateAndInvokesCallback() {
+        var localCursorState = false
+        viewModel.onLocalCursorToggledAction = { localCursorState = it }
+
+        viewModel.toggleLocalCursor()
+        assertTrue(viewModel.uiState.value.isLocalCursorEnabled)
+        assertTrue(localCursorState)
+
+        viewModel.toggleLocalCursor()
+        assertFalse(viewModel.uiState.value.isLocalCursorEnabled)
+        assertFalse(localCursorState)
     }
 
     @Test

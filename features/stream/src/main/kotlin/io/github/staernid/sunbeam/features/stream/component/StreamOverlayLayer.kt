@@ -46,6 +46,8 @@ fun StreamOverlayLayer(
         onSelectMouseMode = viewModel::selectMouseMode,
         onSendShortcut = viewModel::sendShortcut,
         onDismissDialog = viewModel::dismissDialog,
+        onToggleLocalCursor = viewModel::toggleLocalCursor,
+        onEditVirtualController = viewModel::editVirtualController,
         modifier = modifier,
     )
 }
@@ -69,6 +71,8 @@ fun StreamOverlayLayer(
     onSendShortcut: (StreamShortcut) -> Unit,
     onDismissDialog: () -> Unit,
     modifier: Modifier = Modifier,
+    onToggleLocalCursor: () -> Unit = {},
+    onEditVirtualController: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         if (!uiState.isInPiP) {
@@ -112,6 +116,9 @@ fun StreamOverlayLayer(
                     onTogglePerfHud = onTogglePerfHud,
                     onToggleVirtualController = onToggleVirtualController,
                     onDismiss = onDismissDialog,
+                    isLocalCursorEnabled = uiState.isLocalCursorEnabled,
+                    onToggleLocalCursor = onToggleLocalCursor,
+                    onEditVirtualController = onEditVirtualController,
                 )
             }
             StreamDialog.CONFIRM_QUIT -> {

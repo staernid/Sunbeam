@@ -42,6 +42,8 @@ public abstract class VirtualControllerElement extends View {
 
     protected VirtualController virtualController;
     protected final int elementId;
+    protected final VirtualControllerRenderer renderer = new VirtualControllerRenderer();
+    protected int opacityPercent = 90;
 
     private final Paint paint = new Paint();
 
@@ -108,17 +110,6 @@ public abstract class VirtualControllerElement extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         onElementDraw(canvas);
-
-        if (currentMode != Mode.Normal) {
-            paint.setColor(configSelectedColor);
-            paint.setStrokeWidth(getDefaultStrokeWidth());
-            paint.setStyle(Paint.Style.STROKE);
-
-            canvas.drawRect(paint.getStrokeWidth(), paint.getStrokeWidth(),
-                    getWidth()-paint.getStrokeWidth(), getHeight()-paint.getStrokeWidth(),
-                    paint);
-        }
-
         super.onDraw(canvas);
     }
 
@@ -317,6 +308,7 @@ public abstract class VirtualControllerElement extends View {
 
 
     public void setOpacity(int opacity) {
+        this.opacityPercent = opacity;
         int hexOpacity = opacity * 255 / 100;
         this.normalColor = (hexOpacity << 24) | (normalColor & 0x00FFFFFF);
         this.pressedColor = (hexOpacity << 24) | (pressedColor & 0x00FFFFFF);

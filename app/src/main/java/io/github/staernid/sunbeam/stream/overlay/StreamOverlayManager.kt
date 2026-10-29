@@ -12,6 +12,7 @@ package io.github.staernid.sunbeam.stream.overlay
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
+import android.preference.PreferenceManager
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -32,6 +33,7 @@ import io.github.staernid.sunbeam.features.stream.model.StreamMouseMode
 import io.github.staernid.sunbeam.nvstream.jni.MoonBridge
 import io.github.staernid.sunbeam.preferences.PreferenceConfiguration
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Interface providing root/decor view bounds without heap allocations.
@@ -48,19 +50,43 @@ fun interface ShortcutKeyConsumer {
 }
 
 /**
- * Parses performance log text from decoder/network into [PerformanceStats].
+ * Parses performance log text from [io.github.staernid.sunbeam.binding.video.MediaCodecDecoderRenderer]
+ * into structured [PerformanceStats]. Supports both full and lite decoder log formats.
  */
 object PerformanceStatsParser {
+    private val renderingFpsRegex =
+        Regex("""Rendering frame rate:\s*(\d+(?:\.\d+)?)\s*FPS""", RegexOption.IGNORE_CASE)
     private val fpsRegex =
-        Regex("""(?:(\d+(?:\.\d+)?)\s*FPS|(?:FPS[:\s]+|FPS：|Incoming frame rate:\s*)(\d+(?:\.\d+)?))""")
+        Regex(
+            """(?:(\d+(?:\.\d+)?)\s*FPS|(?:FPS[ \t]*[:：][ \t]*|FPS：[ \t]*|Incoming frame rate[^:]*:\s*)(\d+(?:\.\d+)?))""",
+            RegexOption.IGNORE_CASE,
+        )
     private val rttRegex =
-        Regex("""(?:avg\s*(\d+)ms|RTT[:\s]+(\d+)ms|延迟[：:]\s*(\d+)ms)""")
+        Regex(
+            """(?:Average network latency:\s*(\d+)\s*ms|Network/Decoding delay:\s*(\d+)\s*ms|(?:avg|net|rtt|latency|延迟)[ \t]*[:：][ \t]*(\d+)\s*ms|(?:avg)[ \t]+(\d+)\s*ms)""",
+            RegexOption.IGNORE_CASE,
+        )
     private val decodeRegex =
-        Regex("""(?:Dec[:\s]+|解码[：:]\s*|Decode time:\s*)(\d+(?:\.\d+)?)\s*ms""")
+        Regex(
+            """(?:Average decoding time:\s*|Network/Decoding delay:\s*\d+\s*ms\s*/\s*|Dec[ \t]*:[ \t]*|解码[ \t]*[:：][ \t]*|Decode time:\s*)(\d+(?:\.\d+)?)\s*ms""",
+            RegexOption.IGNORE_CASE,
+        )
     private val lossRegex =
-        Regex("""(?:Loss[:\s]+|丢包率[：:]\s*|Frames dropped by your network:\s*)(\d+(?:\.\d+)?)%""")
-    private val codecRegex =
-        Regex("""Video stream:\s*\d+x\d+\s+[\d.]+\s*FPS\s*\((.*?)\)""")
+        Regex(
+            """(?:Frames dropped by your network(?:\s+connection)?:\s*|Packet loss:\s*|Loss[ \t]*:[ \t]*|丢包率[ \t]*[:：][ \t]*)(\d+(?:\.\d+)?)%""",
+            RegexOption.IGNORE_CASE,
+        )
+    private val bandwidthRegex =
+        Regex(
+            """(?:Bandwidth|带宽)[ \t]*[:：][ \t]*(\d+(?:\.\d+)?)\s*([MK])/s|(?:Bandwidth|带宽)[ \t]*[:：][ \t]*(\d+(?:\.\d+)?)\s*(Kbps|Mbps)""",
+            RegexOption.IGNORE_CASE,
+        )
+    private val streamDetailsRegex =
+        Regex("""Video stream:\s*(\d+x\d+)\s+[\d.]+\s*FPS(?:\s*\(([^)]+)\))?""", RegexOption.IGNORE_CASE)
+    private val decoderRegex =
+        Regex("""Decoder:\s*([^\r\n\t]+)""", RegexOption.IGNORE_CASE)
+    private val hostLatencyRegex =
+        Regex("""Host processing latency min/max/average:\s*([^\r\n\t]+)""", RegexOption.IGNORE_CASE)
 
     fun parse(
         text: String,
@@ -70,16 +96,25 @@ object PerformanceStatsParser {
         var rtt = existing.networkLatencyMs
         var decode = existing.decodeLatencyMs
         var loss = existing.packetLossPercentage
-        var codec = existing.videoFormat
+        var bandwidthKbps = existing.bandwidthKbps
+        var videoFormat = existing.videoFormat
+        var decoderName = existing.decoderName
+        var hostLatency = existing.customDetails
 
-        fpsRegex.find(text)?.let { match ->
-            for (i in 1..2) {
-                match.groups[i]?.value?.toFloatOrNull()?.let {
-                    fps = it
-                    return@let
+        val renderedMatch = renderingFpsRegex.find(text)
+        if (renderedMatch != null) {
+            renderedMatch.groupValues[1].toFloatOrNull()?.let { fps = it }
+        } else {
+            fpsRegex.find(text)?.let { match ->
+                for (i in 1..2) {
+                    match.groups[i]?.value?.toFloatOrNull()?.let {
+                        fps = it
+                        return@let
+                    }
                 }
             }
         }
+
         rttRegex.find(text)?.let { match ->
             for (i in 1 until match.groupValues.size) {
                 val value = match.groupValues[i]
@@ -91,14 +126,47 @@ object PerformanceStatsParser {
                 }
             }
         }
+
         decodeRegex.find(text)?.let { match ->
             match.groupValues[1].toFloatOrNull()?.let { decode = it }
         }
+
         lossRegex.find(text)?.let { match ->
             match.groupValues[1].toFloatOrNull()?.let { loss = it }
         }
-        codecRegex.find(text)?.let { match ->
-            codec = match.groupValues[1]
+
+        bandwidthRegex.find(text)?.let { match ->
+            val rawValueMs = match.groupValues[1].toFloatOrNull()
+            val unitMs = match.groupValues[2].uppercase()
+            val rawValueSi = match.groupValues.getOrElse(3) { "" }.toFloatOrNull()
+            val unitSi = match.groupValues.getOrElse(4) { "" }.uppercase()
+            when {
+                rawValueMs != null -> {
+                    // MediaCodecDecoderRenderer reports bytes/sec in M/s or K/s; convert to Kbps
+                    bandwidthKbps = if (unitMs == "M") (rawValueMs * 8000f).roundToInt() else (rawValueMs * 8f).roundToInt()
+                }
+                rawValueSi != null -> {
+                    bandwidthKbps = if (unitSi == "MBPS") (rawValueSi * 1000f).roundToInt() else rawValueSi.roundToInt()
+                }
+            }
+        }
+
+        streamDetailsRegex.find(text)?.let { match ->
+            val resolution = match.groupValues[1]
+            val explicitCodec = match.groupValues.getOrNull(2).orEmpty()
+            videoFormat = if (explicitCodec.isNotEmpty()) {
+                explicitCodec
+            } else {
+                resolution
+            }
+        }
+
+        decoderRegex.find(text)?.let { match ->
+            decoderName = match.groupValues[1].trim()
+        }
+
+        hostLatencyRegex.find(text)?.let { match ->
+            hostLatency = match.groupValues[1].trim()
         }
 
         return existing.copy(
@@ -106,8 +174,10 @@ object PerformanceStatsParser {
             networkLatencyMs = rtt,
             decodeLatencyMs = decode,
             packetLossPercentage = loss,
-            videoFormat = codec,
-            customDetails = text,
+            bandwidthKbps = bandwidthKbps,
+            videoFormat = videoFormat,
+            decoderName = decoderName,
+            customDetails = hostLatency,
         )
     }
 }
@@ -208,6 +278,8 @@ class StreamOverlayManager
         private val onToggleLocalCursor: Runnable? = null,
         private val onKeyboardRequested: Runnable? = null,
         private val onToggleVirtualController: Runnable? = null,
+        private val onEditVirtualController: Runnable? = null,
+        private val initialMouseModeId: Int = 0,
     ) {
         private var isHidingOverlays = false
         private var floatingButtonShown = false
@@ -221,6 +293,13 @@ class StreamOverlayManager
             setupFloatingButtons()
         }
 
+        fun hasComposeOverlay(): Boolean = composeView != null
+
+        fun showQuitConfirmation() {
+            viewModel.openQuitConfirm()
+        }
+
+        @Suppress("DEPRECATION")
         private fun setupComposeOverlay() {
             if (composeView == null) return
 
@@ -237,28 +316,42 @@ class StreamOverlayManager
             viewModel.onQuitAction = { onQuitRequested?.run() }
             viewModel.onSendShortcutAction = { shortcut -> onSendKeys?.onSendKeys(shortcut.keyCodes) }
             viewModel.onMouseModeChangedAction = { mode ->
-                if (mode == StreamMouseMode.LOCAL_CURSOR_TOGGLE) {
-                    onToggleLocalCursor?.run()
-                } else {
-                    val intMode = when (mode) {
-                        StreamMouseMode.DISABLED_DIRECT -> 0
-                        StreamMouseMode.TRACKPAD_NATURAL -> 2
-                        StreamMouseMode.TRACKPAD_GAMING -> 3
-                        StreamMouseMode.LOCAL_CURSOR_TOGGLE -> -1
-                    }
-                    onApplyMouseMode?.onMouseModeSelected(intMode)
+                onApplyMouseMode?.onMouseModeSelected(mode.modeId)
+                if (prefConfig.rememberMouseMode) {
+                    PreferenceManager.getDefaultSharedPreferences(composeView.context)
+                        .edit()
+                        .putString("mouse_mode_list", mode.modeId.toString())
+                        .apply()
                 }
+            }
+            viewModel.onLocalCursorToggledAction = {
+                onToggleLocalCursor?.run()
             }
             viewModel.onZoomModeToggledAction = { onZoomToggleRequested.run() }
             viewModel.onKeyboardToggledAction = { onKeyboardRequested?.run() }
-            viewModel.onVirtualControllerToggledAction = { _ -> onToggleVirtualController?.run() }
+            viewModel.onVirtualControllerToggledAction = { enabled ->
+                onToggleVirtualController?.run()
+                prefConfig.onscreenController = enabled
+            }
+            viewModel.onEditVirtualControllerAction = {
+                onEditVirtualController?.run()
+            }
+            viewModel.onPerfOverlayModeChangedAction = { mode ->
+                prefConfig.enablePerfOverlay = mode != PerfOverlayMode.NONE
+                // Request full decoder telemetry so both Lite and Expanded HUDs have complete stats.
+                prefConfig.enablePerfOverlayLite = false
+            }
 
             val initialPerfMode = if (prefConfig.enablePerfOverlay) {
-                if (prefConfig.enablePerfOverlayLite) PerfOverlayMode.LITE else PerfOverlayMode.EXPANDED
+                PerfOverlayMode.LITE
             } else {
                 PerfOverlayMode.NONE
             }
             viewModel.setPerfOverlayMode(initialPerfMode)
+            viewModel.setInitialMouseMode(StreamMouseMode.fromModeId(initialMouseModeId))
+            viewModel.setVirtualControllerEnabled(prefConfig.onscreenController)
+            viewModel.setLocalCursorEnabled(prefConfig.enableMouseLocalCursor)
+
             viewModel.setPerfOverlayPosition(
                 if (prefConfig.enablePerfOverlayBottom) {
                     PerfOverlayPosition.BOTTOM_CENTER
@@ -350,9 +443,7 @@ class StreamOverlayManager
         }
 
         fun updateZoomButtonAppearance(isPanZoomMode: Boolean) {
-            if (viewModel.uiState.value.isPanZoomMode != isPanZoomMode) {
-                viewModel.toggleZoomMode()
-            }
+            viewModel.setZoomMode(isPanZoomMode)
 
             if (overlayZoomButton != null) {
                 overlayZoomButton.setBackgroundResource(
@@ -364,6 +455,14 @@ class StreamOverlayManager
                 )
                 overlayZoomButton.alpha = 1.0f
             }
+        }
+
+        fun updateVirtualControllerState(enabled: Boolean) {
+            viewModel.setVirtualControllerEnabled(enabled)
+        }
+
+        fun updateLocalCursorState(enabled: Boolean) {
+            viewModel.setLocalCursorEnabled(enabled)
         }
 
         fun updateFloatingButtonVisibility(show: Boolean) {
@@ -384,20 +483,23 @@ class StreamOverlayManager
         }
 
         fun toggleHUD(): Boolean {
+            if (composeView != null) {
+                viewModel.togglePerfHud()
+                return prefConfig.enablePerfOverlay
+            }
+
             prefConfig.enablePerfOverlay = !prefConfig.enablePerfOverlay
             viewModel.togglePerfHud()
 
-            if (composeView == null) {
-                if (prefConfig.enablePerfOverlay) {
-                    perfOverlayView?.visibility = View.VISIBLE
-                    if (prefConfig.enablePerfOverlayLite) {
-                        perfOverlayLite?.visibility = View.VISIBLE
-                    } else {
-                        perfOverlayBig?.visibility = View.VISIBLE
-                    }
+            if (prefConfig.enablePerfOverlay) {
+                perfOverlayView?.visibility = View.VISIBLE
+                if (prefConfig.enablePerfOverlayLite) {
+                    perfOverlayLite?.visibility = View.VISIBLE
                 } else {
-                    perfOverlayView?.visibility = View.GONE
+                    perfOverlayBig?.visibility = View.VISIBLE
                 }
+            } else {
+                perfOverlayView?.visibility = View.GONE
             }
             return prefConfig.enablePerfOverlay
         }
@@ -463,6 +565,7 @@ class StreamOverlayManager
         fun onExitPiP() {
             isHidingOverlays = false
             viewModel.onExitPiP()
+            prefConfig.enablePerfOverlay = viewModel.uiState.value.perfOverlayMode != PerfOverlayMode.NONE
 
             if (composeView == null) {
                 if (floatingButtonShown) {

@@ -461,6 +461,11 @@ private fun ScreenContent(
                         onFeedbackMessageShown = profilesViewModel::clearFeedbackMessage,
                         onUpdateGamepadState = profilesViewModel::updateGamepadState,
                         onResetOscLayout = profilesViewModel::resetOscLayout,
+                        onToggleOscEnabled = profilesViewModel::setOscEnabled,
+                        onToggleHideOscWhenHasGamepad = profilesViewModel::setHideOscWhenHasGamepad,
+                        onToggleOnlyShowL3R3 = profilesViewModel::setOnlyShowL3R3,
+                        onToggleShowGuideButton = profilesViewModel::setShowGuideButton,
+                        onToggleVibrateOsc = profilesViewModel::setVibrateOsc,
                     )
                 }
 

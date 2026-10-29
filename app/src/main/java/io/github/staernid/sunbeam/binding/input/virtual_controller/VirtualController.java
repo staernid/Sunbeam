@@ -67,6 +67,7 @@ public class VirtualController {
     private List<VirtualControllerElement> elements = new ArrayList<>();
 
     private Vibrator vibrator;
+    private boolean vibrateEnabled = false;
 
     private final VibrationEffect defaultVibrationEffect;
 
@@ -84,41 +85,44 @@ public class VirtualController {
         }
 
         buttonConfigure = new Button(context);
-        buttonConfigure.setAlpha(0.25f);
         buttonConfigure.setFocusable(false);
-        buttonConfigure.setBackgroundResource(R.drawable.ic_settings);
+        VirtualControllerRenderer.styleConfigureButton(buttonConfigure, context, currentMode);
         buttonConfigure.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String message;
-
-                if (currentMode == ControllerMode.Active) {
-                    currentMode = ControllerMode.DisableEnableButtons;
-                    showElements();
-                    message = context.getString(R.string.configuration_mode_disable_enable_buttons);
-                } else if (currentMode == ControllerMode.DisableEnableButtons){
-                    currentMode = ControllerMode.MoveButtons;
-                    showEnabledElements();
-                    message = context.getString(R.string.configuration_mode_move_buttons);
-                } else if (currentMode == ControllerMode.MoveButtons) {
-                    currentMode = ControllerMode.ResizeButtons;
-                    message = context.getString(R.string.configuration_mode_resize_buttons);
-                } else {
-                    currentMode = ControllerMode.Active;
-                    VirtualControllerConfigurationLoader.saveProfile(VirtualController.this, context);
-                    message = context.getString(R.string.configuration_mode_exiting);
-                }
-
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-
-                buttonConfigure.invalidate();
-
-                for (VirtualControllerElement element : elements) {
-                    element.invalidate();
-                }
+                cycleConfigurationMode();
             }
         });
+    }
 
+    public void cycleConfigurationMode() {
+        String message;
+
+        if (currentMode == ControllerMode.Active) {
+            currentMode = ControllerMode.DisableEnableButtons;
+            showElements();
+            message = context.getString(R.string.configuration_mode_disable_enable_buttons);
+        } else if (currentMode == ControllerMode.DisableEnableButtons) {
+            currentMode = ControllerMode.MoveButtons;
+            showEnabledElements();
+            message = context.getString(R.string.configuration_mode_move_buttons);
+        } else if (currentMode == ControllerMode.MoveButtons) {
+            currentMode = ControllerMode.ResizeButtons;
+            message = context.getString(R.string.configuration_mode_resize_buttons);
+        } else {
+            currentMode = ControllerMode.Active;
+            VirtualControllerConfigurationLoader.saveProfile(VirtualController.this, context);
+            message = context.getString(R.string.configuration_mode_exiting);
+        }
+
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+
+        VirtualControllerRenderer.styleConfigureButton(buttonConfigure, context, currentMode);
+        buttonConfigure.invalidate();
+
+        for (VirtualControllerElement element : elements) {
+            element.invalidate();
+        }
     }
 
     Handler getHandler() {
@@ -198,12 +202,11 @@ public class VirtualController {
     public void refreshLayout() {
         removeElements();
 
-        DisplayMetrics screen = context.getResources().getDisplayMetrics();
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(context);
+        vibrateEnabled = prefs.vibrateOsc || prefs.enableKeyboardVibrate;
 
-        int buttonSize = (int)(screen.heightPixels*0.06f);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
-        params.leftMargin = 15;
-        params.topMargin = 15;
+        VirtualControllerRenderer.styleConfigureButton(buttonConfigure, context, currentMode);
+        FrameLayout.LayoutParams params = VirtualControllerRenderer.createConfigureButtonLayoutParams(context);
         frame_layout.addView(buttonConfigure, params);
 
         // Start with the default layout
@@ -246,7 +249,7 @@ public class VirtualController {
         handler.removeCallbacks(delayedRetransmitRunnable);
 
         sendControllerInputContextInternal();
-        if (frame_layout != null && PreferenceConfiguration.readPreferences(context).enableKeyboardVibrate) {
+        if (frame_layout != null && vibrateEnabled && vibrator != null) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 VibrationEffect effect;
                 if (vibrationDuration == 0) {

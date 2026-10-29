@@ -7,6 +7,7 @@
 
 package io.github.staernid.sunbeam.features.stream.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,12 +37,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardCommandKey
+import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -58,16 +61,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.staernid.sunbeam.core.designsystem.focus.sunbeamFocusable
 import io.github.staernid.sunbeam.features.stream.model.PerfOverlayMode
 import io.github.staernid.sunbeam.features.stream.model.StreamMouseMode
 import io.github.staernid.sunbeam.features.stream.model.StreamShortcut
 
+private val DrawerGlassSurface = Color(0xDC0B0F17)
+private val DrawerGlassBorder = Color(0x22FFFFFF)
+private val DrawerTileInactive = Color(0x14FFFFFF)
+private val DrawerTileActive = Color(0x333B82F6)
+private val DrawerTileActiveBorder = Color(0x8060A5FA)
+private val DrawerTextPrimary = Color(0xFFF3F4F6)
+private val DrawerTextSecondary = Color(0xFF9CA3AF)
+private val DrawerAccent = Color(0xFF60A5FA)
+private val DrawerDangerBg = Color(0x33EF4444)
+private val DrawerDangerBorder = Color(0x66F87171)
+private val DrawerDangerText = Color(0xFFFCA5A5)
+
 /**
- * Slide-in edge drawer providing in-stream controls, quick toggles, inline mouse mode,
- * and shortcut dispatch.
+ * Compact, translucent dark-glass slide-in drawer providing in-stream controls,
+ * quick toggles, mouse mode selection, and keyboard shortcut dispatch.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -87,6 +105,9 @@ fun StreamControlDrawer(
     onToggleVirtualController: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    isLocalCursorEnabled: Boolean = false,
+    onToggleLocalCursor: () -> Unit = {},
+    onEditVirtualController: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
@@ -97,29 +118,30 @@ fun StreamControlDrawer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
+                .background(Color.Black.copy(alpha = 0.38f))
                 .clickable(onClick = onDismiss)
                 .testTag("stream_drawer_scrim"),
         )
 
-        // Slide-in drawer
+        // Compact slide-in edge panel
         Surface(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .fillMaxHeight()
-                .fillMaxWidth(0.85f)
-                .widthIn(max = 360.dp)
+                .widthIn(min = 264.dp, max = 300.dp)
+                .width(292.dp)
                 .testTag("stream_control_drawer"),
-            shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-            tonalElevation = 8.dp,
+            shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
+            color = DrawerGlassSurface,
+            contentColor = DrawerTextPrimary,
+            border = BorderStroke(1.dp, DrawerGlassBorder),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Header: Title & Close Button
                 Row(
@@ -127,32 +149,30 @@ fun StreamControlDrawer(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Stream Controls",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        )
-                        Text(
-                            text = "Active Session",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        )
-                    }
+                    Text(
+                        text = "Stream Controls",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = DrawerTextPrimary,
+                        ),
+                    )
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
+                            .size(28.dp)
                             .sunbeamFocusable()
                             .testTag("close_drawer_button"),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close Controls",
+                            tint = DrawerTextSecondary,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
 
-                // Quick Actions: Disconnect & Quit
+                // Session Actions: Disconnect & Quit
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -163,21 +183,33 @@ fun StreamControlDrawer(
                             .weight(1f)
                             .sunbeamFocusable()
                             .testTag("drawer_disconnect_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, DrawerGlassBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = DrawerTileInactive,
+                            contentColor = DrawerTextPrimary,
+                        ),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(15.dp),
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Text(text = "Disconnect", maxLines = 1)
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = "Disconnect",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                        )
                     }
                     Button(
                         onClick = onOpenQuitConfirm,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, DrawerDangerBorder),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            containerColor = DrawerDangerBg,
+                            contentColor = DrawerDangerText,
                         ),
                         modifier = Modifier
                             .weight(1f)
@@ -188,138 +220,213 @@ fun StreamControlDrawer(
                         Icon(
                             imageVector = Icons.Default.PowerSettingsNew,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(15.dp),
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Text(text = "Quit Session", maxLines = 1)
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = "Quit Session",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                        )
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(color = DrawerGlassBorder)
 
                 // Quick Toggles
-                Text(
-                    text = "Quick Toggles",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    ),
-                )
+                DrawerSectionHeader("Quick Toggles")
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    DrawerQuickToggle(
-                        icon = Icons.Default.Gamepad,
-                        title = "Virtual Controller",
-                        active = isVirtualControllerEnabled,
-                        onClick = onToggleVirtualController,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("stream_toggle_virtual_controller"),
-                    )
-                    DrawerQuickToggle(
-                        icon = if (isPanZoomMode) Icons.Default.ZoomOut else Icons.Default.ZoomIn,
-                        title = if (isPanZoomMode) "Exit Zoom" else "Pan / Zoom",
-                        active = isPanZoomMode,
-                        onClick = onToggleZoomMode,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("stream_toggle_zoom"),
-                    )
-                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        DrawerQuickToggle(
+                            icon = Icons.Default.Gamepad,
+                            title = "On-Screen Pad",
+                            subtitle = if (isVirtualControllerEnabled) "Visible" else "Hidden",
+                            active = isVirtualControllerEnabled,
+                            onClick = onToggleVirtualController,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("stream_toggle_virtual_controller"),
+                        )
+                        DrawerQuickToggle(
+                            icon = if (isPanZoomMode) Icons.Default.ZoomOut else Icons.Default.ZoomIn,
+                            title = "Pan / Zoom",
+                            subtitle = if (isPanZoomMode) "Active" else "Off",
+                            active = isPanZoomMode,
+                            onClick = onToggleZoomMode,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("stream_toggle_zoom"),
+                        )
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    DrawerQuickToggle(
-                        icon = Icons.Default.Keyboard,
-                        title = "Keyboard",
-                        active = false,
-                        onClick = onToggleKeyboard,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("stream_toggle_keyboard"),
-                    )
-                    DrawerQuickToggle(
-                        icon = Icons.Default.Speed,
-                        title = "HUD: ${perfOverlayMode.name}",
-                        active = perfOverlayMode != PerfOverlayMode.NONE,
-                        onClick = onTogglePerfHud,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("stream_toggle_hud"),
-                    )
-                }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        DrawerQuickToggle(
+                            icon = Icons.Default.Keyboard,
+                            title = "Keyboard",
+                            subtitle = "Soft Input",
+                            active = false,
+                            onClick = onToggleKeyboard,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("stream_toggle_keyboard"),
+                        )
+                        val hudLabel = when (perfOverlayMode) {
+                            PerfOverlayMode.NONE -> "Off"
+                            PerfOverlayMode.LITE -> "Lite"
+                            PerfOverlayMode.EXPANDED -> "Full"
+                        }
+                        DrawerQuickToggle(
+                            icon = Icons.Default.Speed,
+                            title = "Stats HUD",
+                            subtitle = hudLabel,
+                            active = perfOverlayMode != PerfOverlayMode.NONE,
+                            onClick = onTogglePerfHud,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("stream_toggle_hud"),
+                        )
+                    }
 
-                HorizontalDivider()
-
-                // Inline Mouse Mode
-                Text(
-                    text = "Mouse Mode",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    StreamMouseMode.entries.forEach { mode ->
-                        val isSelected = mode == selectedMouseMode
+                    if (isVirtualControllerEnabled) {
                         Surface(
-                            onClick = { onSelectMouseMode(mode) },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                            } else {
-                                Color.Transparent
-                            },
+                            onClick = onEditVirtualController,
+                            shape = RoundedCornerShape(10.dp),
+                            color = DrawerTileInactive,
+                            border = BorderStroke(1.dp, DrawerGlassBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .sunbeamFocusable(shape = RoundedCornerShape(12.dp)),
+                                .sunbeamFocusable(shape = RoundedCornerShape(10.dp))
+                                .testTag("stream_edit_virtual_controller"),
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.Center,
                             ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { onSelectMouseMode(mode) },
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = DrawerAccent,
+                                    modifier = Modifier.size(15.dp),
                                 )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = mode.title,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = FontWeight.SemiBold,
-                                        ),
-                                    )
-                                    Text(
-                                        text = mode.description,
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        ),
-                                    )
-                                }
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Edit On-Screen Layout",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = DrawerAccent,
+                                        fontWeight = FontWeight.SemiBold,
+                                    ),
+                                )
                             }
                         }
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(color = DrawerGlassBorder)
 
-                // Special Keys & Shortcuts
-                Text(
-                    text = "Special Keys & Shortcuts",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    ),
-                )
+                // Compact Mouse Mode Section
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    DrawerSectionHeader("Mouse Mode")
+                    Surface(
+                        onClick = onToggleLocalCursor,
+                        shape = RoundedCornerShape(50),
+                        color = if (isLocalCursorEnabled) DrawerTileActive else DrawerTileInactive,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isLocalCursorEnabled) DrawerTileActiveBorder else DrawerGlassBorder,
+                        ),
+                        modifier = Modifier
+                            .sunbeamFocusable(shape = RoundedCornerShape(50))
+                            .testTag("stream_toggle_local_cursor"),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mouse,
+                                contentDescription = null,
+                                tint = if (isLocalCursorEnabled) DrawerAccent else DrawerTextSecondary,
+                                modifier = Modifier.size(12.dp),
+                            )
+                            Text(
+                                text = "Local Cursor",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (isLocalCursorEnabled) DrawerTextPrimary else DrawerTextSecondary,
+                                    fontSize = 10.sp,
+                                ),
+                            )
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    StreamMouseMode.entries.forEach { mode ->
+                        val isSelected = mode == selectedMouseMode
+                        val itemShape = RoundedCornerShape(8.dp)
+                        Surface(
+                            onClick = { onSelectMouseMode(mode) },
+                            shape = itemShape,
+                            color = if (isSelected) DrawerTileActive else DrawerTileInactive,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) DrawerTileActiveBorder else Color.Transparent,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sunbeamFocusable(shape = itemShape),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = mode.title,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) DrawerTextPrimary else DrawerTextSecondary,
+                                    ),
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(
+                                            color = if (isSelected) DrawerAccent else Color(0x33FFFFFF),
+                                            shape = CircleShape,
+                                        ),
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = selectedMouseMode.description,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = DrawerTextSecondary,
+                            fontSize = 11.sp,
+                        ),
+                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp),
+                    )
+                }
+
+                HorizontalDivider(color = DrawerGlassBorder)
+
+                // Special Keys & Shortcuts (Clean Keycaps)
+                DrawerSectionHeader("Special Keys & Shortcuts")
 
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -327,25 +434,27 @@ fun StreamControlDrawer(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     shortcuts.forEach { shortcut ->
-                        AssistChip(
+                        val chipShape = RoundedCornerShape(8.dp)
+                        Surface(
                             onClick = { onSendShortcut(shortcut) },
-                            label = {
-                                Text(
-                                    text = shortcut.label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardCommandKey,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                            },
+                            shape = chipShape,
+                            color = DrawerTileInactive,
+                            border = BorderStroke(1.dp, DrawerGlassBorder),
                             modifier = Modifier
-                                .sunbeamFocusable()
+                                .sunbeamFocusable(shape = chipShape)
                                 .testTag("shortcut_${shortcut.id}"),
-                        )
+                        ) {
+                            Text(
+                                text = shortcut.label,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = DrawerTextPrimary,
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 11.sp,
+                                ),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -354,43 +463,70 @@ fun StreamControlDrawer(
 }
 
 @Composable
+private fun DrawerSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.SemiBold,
+            color = DrawerAccent,
+            letterSpacing = 0.3.sp,
+        ),
+    )
+}
+
+@Composable
 private fun DrawerQuickToggle(
     icon: ImageVector,
     title: String,
+    subtitle: String,
     active: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tileShape = RoundedCornerShape(10.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = if (active) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        },
-        contentColor = if (active) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        modifier = modifier.sunbeamFocusable(shape = RoundedCornerShape(12.dp)),
+        shape = tileShape,
+        color = if (active) DrawerTileActive else DrawerTileInactive,
+        contentColor = DrawerTextPrimary,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (active) DrawerTileActiveBorder else DrawerGlassBorder,
+        ),
+        modifier = modifier.sunbeamFocusable(shape = tileShape),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                tint = if (active) DrawerAccent else DrawerTextSecondary,
+                modifier = Modifier.size(16.dp),
             )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = DrawerTextPrimary,
+                        fontSize = 11.sp,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = if (active) DrawerAccent else DrawerTextSecondary,
+                        fontSize = 10.sp,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -417,7 +553,7 @@ fun StreamMenuDialog(
         isPanZoomMode = isPanZoomMode,
         isVirtualControllerEnabled = isVirtualControllerEnabled,
         perfOverlayMode = PerfOverlayMode.LITE,
-        selectedMouseMode = StreamMouseMode.TRACKPAD_NATURAL,
+        selectedMouseMode = StreamMouseMode.MULTI_TOUCH,
         shortcuts = StreamShortcut.defaultShortcuts,
         onDisconnect = onDisconnect,
         onOpenQuitConfirm = onOpenQuitConfirm,

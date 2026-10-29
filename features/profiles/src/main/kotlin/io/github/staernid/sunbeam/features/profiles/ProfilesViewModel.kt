@@ -76,7 +76,16 @@ class ProfilesViewModel(
         viewModelScope.launch {
             repo.settingsFlow.collect { settings ->
                 val normalizedOpacity = (settings.oscOpacity / 100f).coerceIn(0.1f, 1.0f)
-                _uiState.update { it.copy(oscOpacity = normalizedOpacity) }
+                _uiState.update {
+                    it.copy(
+                        oscEnabled = settings.onscreenController,
+                        hideOscWhenHasGamepad = settings.hideOscWhenHasGamepad,
+                        onlyShowL3R3 = settings.onlyShowL3R3,
+                        showGuideButton = settings.showGuideButton,
+                        vibrateOsc = settings.vibrateOsc,
+                        oscOpacity = normalizedOpacity,
+                    )
+                }
             }
         }
     }
@@ -290,6 +299,51 @@ class ProfilesViewModel(
     fun setRumbleActive(active: Boolean) {
         updateGamepadState { debug ->
             debug.copy(isRumbling = active)
+        }
+    }
+
+    fun setOscEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(oscEnabled = enabled) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(onscreenController = enabled) }
+            }
+        }
+    }
+
+    fun setHideOscWhenHasGamepad(hide: Boolean) {
+        _uiState.update { it.copy(hideOscWhenHasGamepad = hide) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(hideOscWhenHasGamepad = hide) }
+            }
+        }
+    }
+
+    fun setOnlyShowL3R3(onlyL3R3: Boolean) {
+        _uiState.update { it.copy(onlyShowL3R3 = onlyL3R3) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(onlyShowL3R3 = onlyL3R3) }
+            }
+        }
+    }
+
+    fun setShowGuideButton(showGuide: Boolean) {
+        _uiState.update { it.copy(showGuideButton = showGuide) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(showGuideButton = showGuide) }
+            }
+        }
+    }
+
+    fun setVibrateOsc(vibrate: Boolean) {
+        _uiState.update { it.copy(vibrateOsc = vibrate) }
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.updateSettings { it.copy(vibrateOsc = vibrate) }
+            }
         }
     }
 

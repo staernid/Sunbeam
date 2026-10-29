@@ -662,6 +662,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         });
 
         ComposeView composeView = findViewById(R.id.streamComposeOverlay);
+        int initialMouseMode = Objects.equals(appUUID, NvApp.REMOTE_INPUT_UUID)
+                ? 2
+                : StreamMenuCoordinator.resolveInitialMouseMode(this, isOnExternalDisplay());
 
         overlayManager = new StreamOverlayManager(
                 prefConfig,
@@ -678,12 +681,14 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 composeView,
                 new StreamViewModel(),
                 this::disconnect,
-                this::quit,
+                this::quitNow,
                 this::sendKeys,
                 this::applyMouseMode,
                 this::toggleMouseLocalCursor,
                 this::toggleKeyboard,
-                this::toggleVirtualController
+                this::toggleVirtualController,
+                controlsManager::cycleVirtualControllerEditMode,
+                initialMouseMode
         );
 
         gameMenuCallbacks = new GameMenu(this);
@@ -756,6 +761,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public void toggleVirtualController() {
         if (controlsManager != null) {
             controlsManager.toggleVirtualController();
+            if (overlayManager != null) {
+                overlayManager.updateVirtualControllerState(prefConfig.onscreenController);
+            }
         }
     }
 
@@ -1484,6 +1492,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         } else {
             inputCaptureProvider.hideCursor();
         }
+        if (overlayManager != null) {
+            overlayManager.updateLocalCursorState(cursorVisible);
+        }
     }
 
     public void applyMouseMode(int mode) {
@@ -1511,15 +1522,19 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         finish();
     }
 
+    public void quitNow() {
+        quitOnStop = true;
+        if (lifecycleManager != null) {
+            lifecycleManager.setQuitOnStop(true);
+        }
+        finish();
+    }
+
     public void quit() {
-        if (menuCoordinator != null) {
-            menuCoordinator.showQuitConfirmDialog(this, () -> {
-                quitOnStop = true;
-                if (lifecycleManager != null) {
-                    lifecycleManager.setQuitOnStop(true);
-                }
-                finish();
-            });
+        if (overlayManager != null && overlayManager.hasComposeOverlay()) {
+            overlayManager.showQuitConfirmation();
+        } else if (menuCoordinator != null) {
+            menuCoordinator.showQuitConfirmDialog(this, this::quitNow);
         }
     }
 

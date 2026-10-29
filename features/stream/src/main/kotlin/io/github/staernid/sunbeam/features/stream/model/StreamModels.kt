@@ -53,25 +53,50 @@ enum class PerfOverlayPosition {
 }
 
 /**
- * Touchpad / mouse input emulation mode.
+ * Touchpad / mouse input emulation mode matching [PointerInputHandler] mode indices.
  */
-enum class StreamMouseMode(val title: String, val description: String) {
+enum class StreamMouseMode(
+    val modeId: Int,
+    val title: String,
+    val shortLabel: String,
+    val description: String,
+) {
+    MULTI_TOUCH(
+        modeId = 0,
+        title = "Direct Touch",
+        shortLabel = "Direct Touch",
+        description = "Touchscreen maps directly to multi-touch and cursor",
+    ),
+    ABSOLUTE_TOUCH(
+        modeId = 1,
+        title = "Touch Mouse",
+        shortLabel = "Touch Mouse",
+        description = "Tap and drag cursor directly at touch point",
+    ),
     TRACKPAD_NATURAL(
+        modeId = 2,
         title = "Trackpad (Natural)",
+        shortLabel = "Trackpad",
         description = "Two-finger scroll, natural inertia, tap to click",
     ),
     TRACKPAD_GAMING(
+        modeId = 3,
         title = "Trackpad (Gaming)",
-        description = "Relative cursor movement optimized for FPS games",
+        shortLabel = "Gaming Pad",
+        description = "Relative cursor movement with long-press drag",
     ),
-    DISABLED_DIRECT(
-        title = "Direct Touch / Passthrough",
-        description = "Touch coordinates map directly to host cursor",
+    DISABLED(
+        modeId = 4,
+        title = "Touch Off",
+        shortLabel = "Touch Off",
+        description = "Ignore touch input (controller or stylus only)",
     ),
-    LOCAL_CURSOR_TOGGLE(
-        title = "Toggle Local Cursor",
-        description = "Shows or hides hardware pointer cursor locally",
-    ),
+    ;
+
+    companion object {
+        fun fromModeId(modeId: Int): StreamMouseMode =
+            entries.firstOrNull { it.modeId == modeId } ?: MULTI_TOUCH
+    }
 }
 
 /**
