@@ -58,7 +58,7 @@ object PerformanceStatsParser {
         Regex("""Rendering frame rate:\s*(\d+(?:\.\d+)?)\s*FPS""", RegexOption.IGNORE_CASE)
     private val fpsRegex =
         Regex(
-            """(?:(\d+(?:\.\d+)?)\s*FPS|(?:FPS[ \t]*[:：][ \t]*|FPS：[ \t]*|Incoming frame rate[^:]*:\s*)(\d+(?:\.\d+)?))""",
+            """(?:(\d+(?:\.\d+)?)\s*FPS|(?:FPS[ \t]*(?::|：)[ \t]*|FPS：[ \t]*|Incoming frame rate[^:]*:\s*)(\d+(?:\.\d+)?))""",
             RegexOption.IGNORE_CASE,
         )
     private val rttRegex =
@@ -330,7 +330,10 @@ class StreamOverlayManager
             viewModel.onZoomModeToggledAction = { onZoomToggleRequested.run() }
             viewModel.onKeyboardToggledAction = { onKeyboardRequested?.run() }
             viewModel.onVirtualControllerToggledAction = { enabled ->
-                onToggleVirtualController?.run()
+                // VirtualController.show/hide touches Views and must run on the main thread.
+                Handler(Looper.getMainLooper()).post {
+                    onToggleVirtualController?.run()
+                }
                 prefConfig.onscreenController = enabled
             }
             viewModel.onEditVirtualControllerAction = {
