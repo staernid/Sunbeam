@@ -41,9 +41,16 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 
 ## Release screenshots
 
-Each tagged release includes curated emulator screenshots of the Hosts, Apps, Profiles, and Settings
-screens as release assets. They use deterministic sample content and can be reviewed and added to
-this README when a release includes UI changes.
+The latest release's emulator captures are shown below. They use deterministic sample content and
+are refreshed automatically with each tagged release.
+
+| Hosts | Apps |
+|:---:|:---:|
+| <img src="https://github.com/staernid/moonlight-android/releases/latest/download/hosts.png" alt="Sunbeam Hosts screen" width="320"> | <img src="https://github.com/staernid/moonlight-android/releases/latest/download/apps.png" alt="Sunbeam Apps screen" width="320"> |
+
+| Profiles | Settings |
+|:---:|:---:|
+| <img src="https://github.com/staernid/moonlight-android/releases/latest/download/profiles.png" alt="Sunbeam Profiles screen" width="320"> | <img src="https://github.com/staernid/moonlight-android/releases/latest/download/settings.png" alt="Sunbeam Settings screen" width="320"> |
 
 ## Build
 
