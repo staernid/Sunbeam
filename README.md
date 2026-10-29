@@ -11,6 +11,7 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 ## Features
 
 ### Streaming
+
 - ✅ H.264 / HEVC / AV1 / HDR via `MediaCodec`
 - ✅ Custom resolution and bitrate
 - ✅ Frame-pacing modes
@@ -21,6 +22,7 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 - ⬜ Surface producer-throttling off, SPS-patch removal (see [upstream triage](docs/UPSTREAM_TRIAGE.md))
 
 ### Input
+
 - ✅ Mouse modes: normal, multi-touch, touchpad, local cursor, disabled
 - ✅ Touchpad sensitivity and virtual touchpad space
 - ✅ Customizable on-screen gamepad, import/export, joystick skins
@@ -31,6 +33,7 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 - ⬜ Xbox Series S/X USB driver init, F13-F24, PrtSc
 
 ### App
+
 - ✅ Host discovery (mDNS + coroutines), manual add, PIN pairing, Wake-on-LAN
 - ✅ Stream profiles, live Gamepad Tester, and On-Screen Control layout preview
 - ✅ Compose UI, Material 3, dynamic color, and OLED Black mode
@@ -40,10 +43,6 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 - ⬜ Up-to-date translations from upstream
 
 ## Screenshots
-
-These curated screenshots are checked into the repository and use deterministic sample content.
-Each tagged release also captures fresh screenshots as a workflow artifact for review; they are not
-published as release assets.
 
 <table>
   <tr>
