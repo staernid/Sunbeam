@@ -9,6 +9,9 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import io.github.staernid.sunbeam.core.data.model.Host
 import io.github.staernid.sunbeam.core.data.model.HostAddress
 import io.github.staernid.sunbeam.core.data.model.HostApp
@@ -31,6 +34,10 @@ class ReleaseScreenshotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
 
         val screen = requireNotNull(intent.getStringExtra(EXTRA_SCREEN)) {
             "Missing required screenshot screen"
@@ -140,7 +147,7 @@ private fun ScreenshotScreen(
 private val screenshotHosts = listOf(
     Host(
         uuid = "screenshot-host-01",
-        name = "Living Room PC",
+        name = "Living Room",
         manualAddress = HostAddress("192.0.2.10"),
         state = HostState.ONLINE,
         pairState = PairState.PAIRED,
@@ -149,7 +156,7 @@ private val screenshotHosts = listOf(
     ),
     Host(
         uuid = "screenshot-host-02",
-        name = "Studio Desktop",
+        name = "Studio PC",
         manualAddress = HostAddress("192.0.2.20"),
         state = HostState.ONLINE,
         pairState = PairState.PAIRED,

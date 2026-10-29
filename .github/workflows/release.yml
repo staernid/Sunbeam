@@ -101,6 +101,14 @@ jobs:
               test -s "release-artifacts/screenshots/$screen.png"
             done
 
+      - name: Upload screenshots for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-screenshots-${{ github.ref_name }}
+          path: release-artifacts/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -108,4 +116,3 @@ jobs:
           files: |
             release-artifacts/*.apk
             release-artifacts/SHA256SUMS.txt
-            release-artifacts/screenshots/*.png

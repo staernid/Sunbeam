@@ -39,18 +39,22 @@ Redesigned in modular Kotlin and Jetpack Compose (`core/*`, `features/*`).
 - ✅ Unit and Roborazzi screenshot tests in CI
 - ⬜ Up-to-date translations from upstream
 
-## Release screenshots
+## Screenshots
 
-The latest release's emulator captures are shown below. They use deterministic sample content and
-are refreshed automatically with each tagged release.
+These curated screenshots are checked into the repository and use deterministic sample content.
+Each tagged release also captures fresh screenshots as a workflow artifact for review; they are not
+published as release assets.
 
-| Hosts | Apps |
-|:---:|:---:|
-| <img src="https://github.com/staernid/moonlight-android/releases/latest/download/hosts.png" alt="Sunbeam Hosts screen" width="320"> | <img src="https://github.com/staernid/moonlight-android/releases/latest/download/apps.png" alt="Sunbeam Apps screen" width="320"> |
-
-| Profiles | Settings |
-|:---:|:---:|
-| <img src="https://github.com/staernid/moonlight-android/releases/latest/download/profiles.png" alt="Sunbeam Profiles screen" width="320"> | <img src="https://github.com/staernid/moonlight-android/releases/latest/download/settings.png" alt="Sunbeam Settings screen" width="320"> |
+<table>
+  <tr>
+    <td align="center"><strong>Hosts</strong><br><img src="docs/screenshots/hosts.png" alt="Sunbeam Hosts screen" width="280"></td>
+    <td align="center"><strong>Apps</strong><br><img src="docs/screenshots/apps.png" alt="Sunbeam Apps screen" width="280"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Profiles</strong><br><img src="docs/screenshots/profiles.png" alt="Sunbeam Profiles screen" width="280"></td>
+    <td align="center"><strong>Settings</strong><br><img src="docs/screenshots/settings.png" alt="Sunbeam Settings screen" width="280"></td>
+  </tr>
+</table>
 
 ## Build
 
