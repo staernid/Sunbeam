@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId = "io.github.staernid.sunbeam"
-        versionName = "20.2.6"
-        versionCode = 57
+        versionName = "21.0.0"
+        versionCode = 58
 
         ndk {
             debugSymbolLevel = "FULL"

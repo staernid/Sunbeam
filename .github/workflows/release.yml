@@ -38,39 +38,47 @@ jobs:
       - name: Assemble Release and Debug APKs
         run: ./gradlew :app:assembleRelease :app:assembleDebug
 
-      - name: Sign or Prepare Release APKs & Checksums
+      - name: Sign Release APKs & Generate Checksums
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -euo pipefail
+
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "All Android signing secrets must be configured before publishing a release." >&2
+            exit 1
+          fi
+
           mkdir -p release-artifacts
           BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME/build-tools/"* | sort -V | tail -n 1)
-
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-            for apk in app/build/outputs/apk/release/*.apk; do
-              base_name=$(basename "$apk" -unsigned.apk)
-              base_name=$(basename "$base_name" .apk)
-              aligned_apk="release-artifacts/${base_name}-aligned.apk"
-              signed_apk="release-artifacts/${base_name}-signed.apk"
-              "$BUILD_TOOLS_DIR/zipalign" -v -p 4 "$apk" "$aligned_apk"
-              "$BUILD_TOOLS_DIR/apksigner" sign \
-                --ks release.keystore \
-                --ks-pass env:KEYSTORE_PASSWORD \
-                --ks-key-alias "$KEY_ALIAS" \
-                --key-pass env:KEY_PASSWORD \
-                --out "$signed_apk" \
-                "$aligned_apk"
-              rm -f "$aligned_apk"
-            done
-            rm -f release.keystore
-          else
-            for apk in app/build/outputs/apk/release/*.apk; do
-              cp "$apk" release-artifacts/
-            done
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/*.apk)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No release APKs were produced." >&2
+            exit 1
           fi
+
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          trap 'rm -f release.keystore' EXIT
+          for apk in "${apks[@]}"; do
+            base_name=$(basename "$apk" -unsigned.apk)
+            base_name=$(basename "$base_name" .apk)
+            aligned_apk="release-artifacts/${base_name}-aligned.apk"
+            signed_apk="release-artifacts/${base_name}-signed.apk"
+            "$BUILD_TOOLS_DIR/zipalign" -v -p 4 "$apk" "$aligned_apk"
+            "$BUILD_TOOLS_DIR/apksigner" sign \
+              --ks release.keystore \
+              --ks-pass env:KEYSTORE_PASSWORD \
+              --ks-key-alias "$KEY_ALIAS" \
+              --key-pass env:KEY_PASSWORD \
+              --out "$signed_apk" \
+              "$aligned_apk"
+            "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$signed_apk"
+            rm -f "$aligned_apk"
+          done
 
           cd release-artifacts
           sha256sum *.apk > SHA256SUMS.txt
